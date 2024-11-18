@@ -54,7 +54,7 @@ export default function Home() {
           Explore more →
         </a>
         <p className="text-center w-full">
-          Created by Aiden Tabrizi
+          {" "}
         </p>
       </footer>
     </div>

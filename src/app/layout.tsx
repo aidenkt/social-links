@@ -14,8 +14,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "AidenKT's Socials",
-  description: "All of my social media platforms in one place.",
+  title: "Aiden's Socials",
+  description: "All of my social media accounts in one place.",
 };
 
 export default function RootLayout({

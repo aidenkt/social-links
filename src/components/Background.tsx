@@ -52,7 +52,7 @@ export default function FloatingImages() {
 	const height = width / aspectRatio      // Height based on aspect ratio
 	
 	// Randomize the starting position of the image, ensuring it fits on the screen
-	const x = Math.random() * (windowWidth - 20) // Random horizontal position
+	const x = Math.random() * (windowWidth - 40) // Random horizontal position
 	let y = windowHeight + height                // Start below the screen vertically
 	if (y < 200) {
 		y = 1200

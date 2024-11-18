@@ -28,10 +28,10 @@ export default function Home() {
         `}
         >
         <span className="block md:inline">
-          There's more where{' '}
+          {"There's more where "}
         </span> 
         <span className="block md:inline">
-          that came from.
+          {"that came from."}
         </span>
       </p>
         

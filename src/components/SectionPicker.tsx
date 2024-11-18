@@ -146,10 +146,10 @@ const customComponents: Record<SectionId, () => JSX.Element> = {
 	<div className="grid grid-cols-1 gap-2">
 	  <SocialAccount
 		src="/platform/mail.webp"
-		name="contact@aidenkt.com"
+		name="hi@aidenkt.com"
 		platform="Email"
 		cta="Email"
-		link="mailto:contact@aidenkt.com"
+		link="mailto:hi@aidenkt.com"
 	  />
 	  <SocialAccount
 		src="/platform/discord.webp"

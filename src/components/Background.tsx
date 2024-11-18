@@ -53,7 +53,7 @@ export default function FloatingImages() {
 	
 	// Randomize the starting position of the image, ensuring it fits on the screen
 	const x = Math.random() * (windowWidth - 3) // Random horizontal position
-	var y = windowHeight + height                // Start below the screen vertically
+	let y = windowHeight + height                // Start below the screen vertically
 	if (y < 200) {
 		y = 1200
 	}
@@ -78,22 +78,20 @@ export default function FloatingImages() {
 	}
   }, [])
 
-  // Periodically spawn new images (separate from the images state)
   useEffect(() => {
-	const spawnInterval = setInterval(() => {
-	  if (images.length < MAX_IMAGES) {
-		const newImage = createImage()
-		setImages((prevImages) => {
-		  const updatedImages = [...prevImages, newImage]
-		  // Update the spawned images list
-		  setSpawnedImages((prevSet) => new Set([...prevSet, newImage.src]))
-		  return updatedImages
-		})
-	  }
-	}, 4000)
-
-	return () => clearInterval(spawnInterval)
-  }, [images.length]) // Only depend on the length of images, not the full array
+	  const spawnInterval = setInterval(() => {
+		if (images.length < MAX_IMAGES) {
+		  const newImage = createImage();
+		  setImages((prevImages) => {
+			const updatedImages = [...prevImages, newImage];
+			setSpawnedImages((prevSet) => new Set([...prevSet, newImage.src]));
+			return updatedImages;
+		  });
+		}
+	  }, 4000);
+  
+	  return () => clearInterval(spawnInterval);  // Cleanup function
+	}, [images.length, createImage]);
 
   // Handle the completion of an image's animation (remove it when it's off-screen)
   const handleImageComplete = (id: string, src: string) => {

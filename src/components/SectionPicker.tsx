@@ -5,6 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
 import SocialAccount from './SocialAccount'
 
+// Define valid section IDs
+type SectionId = 'primary' | 'text' | 'photos' | 'videos' | 'playlists' | 'work' | 'contact';
+
+// Define the sections array with section IDs as 'id'
 const sections = [
   { id: 'primary', label: 'Primary', content: 'Primary content goes here' },
   { id: 'text', label: 'Text', content: 'Text content goes here' },
@@ -15,66 +19,67 @@ const sections = [
   { id: 'contact', label: 'Contact', content: 'Contact form goes here' },
 ]
 
-const customComponents = {
+// Define the customComponents object with SectionId keys
+const customComponents: Record<SectionId, () => JSX.Element> = {
   primary: () => (
 	<div className="grid grid-cols-1 gap-2">
-		<SocialAccount
-			src="/platform/instagram.webp"
-			name="@aidentabrizi"
-			platform="Instagram"
-			cta="Follow"
-			link="https://instagram.com/aidentabrizi"
-			buttonColor="#FF0068"
-		/>
-		<SocialAccount
-			src="/platform/snapchat.webp"
-			name="aiden.kt"
-			platform="Snapchat"
-			cta="Add"
-			link="https://snapchat.com/t/RrTkU4U4"
-			buttonColor="#FFFC00"
-			textColor="black"
-		/>
+	  <SocialAccount
+		src="/platform/instagram.webp"
+		name="@aidentabrizi"
+		platform="Instagram"
+		cta="Follow"
+		link="https://instagram.com/aidentabrizi"
+		buttonColor="#FF0068"
+	  />
+	  <SocialAccount
+		src="/platform/snapchat.webp"
+		name="aiden.kt"
+		platform="Snapchat"
+		cta="Add"
+		link="https://snapchat.com/t/RrTkU4U4"
+		buttonColor="#FFFC00"
+		textColor="black"
+	  />
 	</div>
   ),
   text: () => (
 	<div className="grid grid-cols-1 gap-2">
-		<SocialAccount
-			src="/platform/bluesky.webp"
-			name="@aiden.social"
-			platform="Bluesky"
-			cta="Follow"
-			link="https://bsky.app/profile/aiden.social"
-			buttonColor="#0A7AFF"
-		/>
-		<SocialAccount
-			  src="/platform/threads.webp"
-			  name="@aidentabrizi"
-			  platform="Threads"
-			  cta="Follow"
-			link="https://www.threads.net/@aidentabrizi"
-			buttonColor="#000000"
-		/>
-		<SocialAccount
-			src="/platform/medium.webp"
-			name="AidenKT"
-			platform="Medium"
-			cta="Follow"
-			link="https://medium.com/@aidenkt"
-			buttonColor="#000000"
-		/>
+	  <SocialAccount
+		src="/platform/bluesky.webp"
+		name="@aiden.social"
+		platform="Bluesky"
+		cta="Follow"
+		link="https://bsky.app/profile/aiden.social"
+		buttonColor="#0A7AFF"
+	  />
+	  <SocialAccount
+		src="/platform/threads.webp"
+		name="@aidentabrizi"
+		platform="Threads"
+		cta="Follow"
+		link="https://www.threads.net/@aidentabrizi"
+		buttonColor="#000000"
+	  />
+	  <SocialAccount
+		src="/platform/medium.webp"
+		name="AidenKT"
+		platform="Medium"
+		cta="Follow"
+		link="https://medium.com/@aidenkt"
+		buttonColor="#000000"
+	  />
 	</div>
   ),
   photos: () => (
 	<div className="grid grid-cols-1 gap-2">
-		<SocialAccount
-			src="/platform/instagram.webp"
-			name="@aidentabrizi"
-			platform="Instagram"
-			cta="Follow"
-			link="https://instagram.com/aidentabrizi"
-			buttonColor="#FF0068"
-		/>
+	  <SocialAccount
+		src="/platform/instagram.webp"
+		name="@aidentabrizi"
+		platform="Instagram"
+		cta="Follow"
+		link="https://instagram.com/aidentabrizi"
+		buttonColor="#FF0068"
+	  />
 	</div>
   ),
   videos: () => (
@@ -88,33 +93,33 @@ const customComponents = {
 		buttonColor="#FF0000"
 	  />
 	  <SocialAccount
-		  src="/platform/tiktok.webp"
-		  name="@aidenkt"
-		  platform="TikTok"
-		  cta="Follow"
+		src="/platform/tiktok.webp"
+		name="@aidenkt"
+		platform="TikTok"
+		cta="Follow"
 		link="https://www.tiktok.com/@aidenkt"
 		buttonColor="#EE1D52"
 	  />
-  </div>
+	</div>
   ),
   playlists: () => (
 	<div className="grid grid-cols-1 gap-2">
-		<SocialAccount
-		  src="/platform/applemusic.webp"
-		  name="@aidenkt"
-		  platform="Apple Music"
-		  cta="Follow"
-		  link="https://music.apple.com/profile/aidenkt"
-		  buttonColor="#FF0436"
-		/>
-		<SocialAccount
-			src="/platform/spotify.webp"
-			name="aidenkt"
-			platform="Spotify"
-			cta="Follow"
-			link="https://open.spotify.com/user/aidentab"
-			buttonColor="#1ED760"
-		/>
+	  <SocialAccount
+		src="/platform/applemusic.webp"
+		name="@aidenkt"
+		platform="Apple Music"
+		cta="Follow"
+		link="https://music.apple.com/profile/aidenkt"
+		buttonColor="#FF0436"
+	  />
+	  <SocialAccount
+		src="/platform/spotify.webp"
+		name="aidenkt"
+		platform="Spotify"
+		cta="Follow"
+		link="https://open.spotify.com/user/aidentab"
+		buttonColor="#1ED760"
+	  />
 	</div>
   ),
   work: () => (
@@ -147,19 +152,19 @@ const customComponents = {
 		link="mailto:contact@aidenkt.com"
 	  />
 	  <SocialAccount
-		  src="/platform/discord.webp"
-		  name="discord.gg/YKKAqrs"
-		  platform="Discord"
-		  cta="Join"
-		  link="https://discord.gg/YKKAqrs"
-		  buttonColor="#5865F2"
-		/>
+		src="/platform/discord.webp"
+		name="discord.gg/YKKAqrs"
+		platform="Discord"
+		cta="Join"
+		link="https://discord.gg/YKKAqrs"
+		buttonColor="#5865F2"
+	  />
 	</div>
   ),
 };
 
 export default function Component() {
-  const [activeSection, setActiveSection] = useState(sections[0].id)
+  const [activeSection, setActiveSection] = useState<SectionId>('primary')
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
@@ -170,7 +175,7 @@ export default function Component() {
 	return () => window.removeEventListener('resize', checkIsMobile)
   }, [])
 
-  const handleSectionChange = (sectionId) => {
+  const handleSectionChange = (sectionId: SectionId) => {
 	setActiveSection(sectionId)
 	setIsDropdownOpen(false)
   }
@@ -208,7 +213,7 @@ export default function Component() {
 				{sections.map((section) => (
 				  <button
 					key={section.id}
-					onClick={() => handleSectionChange(section.id)}
+					onClick={() => handleSectionChange(section.id as SectionId)}
 					className={`w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors duration-200 ${
 					  activeSection === section.id ? 'bg-blue-50 text-blue-600' : ''
 					}`}
@@ -225,7 +230,7 @@ export default function Component() {
 		  {sections.map((section) => (
 			<button
 			  key={section.id}
-			  onClick={() => setActiveSection(section.id)}
+			  onClick={() => setActiveSection(section.id as SectionId)}
 			  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
 				activeSection === section.id
 				  ? 'bg-white text-black shadow'

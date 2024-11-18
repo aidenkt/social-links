@@ -8,10 +8,10 @@ interface UserFollowCardProps {
   cta: string;
   link: string;
   buttonColor?: string;
-  textColor: 'white';
+  textColor?: string;
 }
 
-export default function SocialAccount({ src, name, platform, cta, link, buttonColor, textColor }: UserFollowCardProps) {
+export default function SocialAccount({ src, name, platform, cta, link, buttonColor, textColor = 'white' }: UserFollowCardProps) {
   return (
 	<div className="flex items-center bg-white rounded-lg shadow-lg p-3 gap-3 relative">
 	  {/* App Icon */}
@@ -39,9 +39,9 @@ export default function SocialAccount({ src, name, platform, cta, link, buttonCo
 		<button
 		  className={`text-white text-sm font-medium px-4 py-2 rounded-full transition-all hover:opacity-90`}
 		  style={{ 
-			  backgroundColor: buttonColor || '#3B82F6',  // Default to blue if no buttonColor is provided
-			  color: textColor || 'white' // Use the textColor prop, default to white
-			}}
+			backgroundColor: buttonColor || '#3B82F6',  // Default to blue if no buttonColor is provided
+			color: textColor  // Use the textColor prop, default to white if not provided
+		  }}
 		>
 		  {cta}
 		</button>

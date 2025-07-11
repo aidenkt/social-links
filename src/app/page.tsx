@@ -14,7 +14,7 @@ export default function Home() {
     <div className="relative grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen pb-20 gap-12 sm:p-20 font-[family-name:var(--font-geist-sans)] overflow-hidden">
       <Background />
       
-      <main className="flex flex-col gap-12 row-start-2 items-center z-10">
+      <main className="flex flex-col gap-12 row-start-2 items-center z-10 mb-24 sm:mb-0">
         
       <p
         className={`

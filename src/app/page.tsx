@@ -1,4 +1,5 @@
 // pages/index.js
+import { Suspense } from 'react';
 import Image from "next/image";
 import SectionPicker from '../components/SectionPicker';
 import Background from '../components/Background';
@@ -15,27 +16,29 @@ export default function Home() {
       <Background />
       
       <main className="flex flex-col gap-12 row-start-2 items-center z-10">
-        
+
       <p
         className={`
-          ${oswald.className} 
-          font-semibold 
-          text-2xl 
-          text-center 
-          backdrop-blur-3xl 
+          ${oswald.className}
+          font-semibold
+          text-2xl
+          text-center
+          backdrop-blur-3xl
           rounded-lg
           px-2
         `}
         >
         <span className="block md:inline">
           {"There's more where "}
-        </span> 
+        </span>
         <span className="block md:inline">
           {"that came from."}
         </span>
       </p>
-        
-        <SectionPicker />
+
+        <Suspense fallback={<div>Loading...</div>}>
+          <SectionPicker />
+        </Suspense>
       </main>
       <footer className="row-start-3 flex flex-wrap items-center justify-center z-10">
         <a

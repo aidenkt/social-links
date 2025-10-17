@@ -173,6 +173,7 @@ const querySectionMap: Record<string, SectionId> = {
   'playlists': 'playlists',
   'music': 'playlists', // Alias for playlists
   'work': 'work',
+  'dev': 'work', // Alias for work
   'contact': 'contact',
 }
 

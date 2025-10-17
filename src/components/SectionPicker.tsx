@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
 import SocialAccount from './SocialAccount'
@@ -163,10 +164,36 @@ const customComponents: Record<SectionId, () => JSX.Element> = {
   ),
 };
 
+// Map query parameter names to section IDs
+const querySectionMap: Record<string, SectionId> = {
+  'primary': 'primary',
+  'text': 'text',
+  'photos': 'photos',
+  'videos': 'videos',
+  'playlists': 'playlists',
+  'music': 'playlists', // Alias for playlists
+  'work': 'work',
+  'contact': 'contact',
+}
+
 export default function Component() {
+  const searchParams = useSearchParams()
   const [activeSection, setActiveSection] = useState<SectionId>('primary')
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+
+  // Handle query string parameters on mount
+  useEffect(() => {
+    // Check for query parameters (e.g., ?work, ?music, ?contact)
+    const queryKeys = Array.from(searchParams.keys())
+    for (const key of queryKeys) {
+      const mappedSection = querySectionMap[key.toLowerCase()]
+      if (mappedSection) {
+        setActiveSection(mappedSection)
+        break // Use the first valid query parameter
+      }
+    }
+  }, [searchParams])
 
   useEffect(() => {
 	const checkIsMobile = () => setIsMobile(window.innerWidth < 768)

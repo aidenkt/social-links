@@ -135,7 +135,7 @@ const customComponents: Record<SectionId, () => JSX.Element> = {
 	  />
 	  <SocialAccount
 		src="/platform/github.webp"
-		name="AidenKT"
+		name="aidenkt"
 		platform="GitHub"
 		cta="Follow"
 		link="https://github.com/AidenKT"

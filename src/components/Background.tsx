@@ -172,8 +172,20 @@ function getRotatedAabbSize(width: number, height: number, rollDeg: number): { w
   }
 }
 
+/**
+ * Baseline `top` for floaters (below the fold before translateY).
+ * A fixed floor of 1200px matched tall desktops but on short phone viewports it was
+ * far below `wh`, so motion only occupied the lower half of the screen during load.
+ */
+function getSpawnBaseY(wh: number, displayHeight: number): number {
+  const legacy = Math.max(1200, wh + displayHeight)
+  const proportional = wh + displayHeight + Math.max(96, Math.round(wh * 0.2))
+  if (legacy > wh * 1.38) return proportional
+  return legacy
+}
+
 function getSpawnTopY(wh: number, height: number, progress0: number): number {
-  const baseY = Math.max(1200, wh + height)
+  const baseY = getSpawnBaseY(wh, height)
   const lift = wh + height * LIFT_MULTIPLIER
   return baseY - lift * progress0
 }
@@ -367,7 +379,7 @@ function buildFloatingImage(
     // First pick a provisional roll for spawn-bound calculations.
     const provisionalRoll = (Math.random() < 0.5 ? -1 : 1) * pickRollMagnitude()
     const x = pickSpreadX(ww, displayWidth, displayHeight, existingImages, avoidCenterBand, provisionalRoll)
-    const y = Math.max(1200, wh + displayHeight)
+    const y = getSpawnBaseY(wh, displayHeight)
     const rollMagnitude = pickRollMagnitude()
     const rollDirection = pickRollDirection(ww, x, displayWidth, y, existingImages)
     const roll = rollDirection * rollMagnitude
@@ -774,7 +786,13 @@ export default function FloatingImages() {
               // Left-side images yaw right; right-side images yaw left (toward center).
               const centerTiltY = -Math.sign(centerNorm) * edgeCurve * 30
               const centerTiltZMultiplier = 0.85 + edgeCurve * 0.7
-              const lift = windowHeight + image.height * LIFT_MULTIPLIER
+              const vhForLift =
+                windowHeight > 0
+                  ? windowHeight
+                  : typeof window !== 'undefined'
+                    ? window.innerHeight
+                    : 1
+              const lift = Math.max(1, vhForLift) + image.height * LIFT_MULTIPLIER
               const p0 = image.progress0
               const baseDuration = 48 + (1 - d) * 58
               const duration = Math.max(14, baseDuration * (1 - p0))

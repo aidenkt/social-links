@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useEffect, type ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
 import SocialAccount from './SocialAccount'
-
-// Define valid section IDs
-type SectionId = 'primary' | 'text' | 'photos' | 'videos' | 'playlists' | 'work' | 'contact';
+import { SOCIAL_PANEL_SHELL_CLASS } from '../lib/social-panel'
+import { normalizeSectionParam, type SectionId } from '../lib/sections'
 
 // Define the sections array with section IDs as 'id'
 const sections = [
@@ -31,6 +30,14 @@ const customComponents: Record<SectionId, () => JSX.Element> = {
 		cta="Follow"
 		link="https://instagram.com/aidentabrizi"
 		buttonColor="#FF0068"
+	  />
+	  <SocialAccount
+		src="/platform/twitter.webp"
+		name="@aiden_kt"
+		platform="Twitter"
+		cta="Follow"
+		link="https://twitter.com/aiden_kt"
+		buttonColor="#2188F6"
 	  />
 	  <SocialAccount
 		src="/platform/snapchat.webp"
@@ -121,6 +128,14 @@ const customComponents: Record<SectionId, () => JSX.Element> = {
 		link="https://open.spotify.com/user/aidentab"
 		buttonColor="#1ED760"
 	  />
+	  <SocialAccount
+		src="/platform/tidal.webp"
+		name="@aidenkt"
+		platform="Tidal"
+		cta="Follow"
+		link="https://tidal.com/@aidenkt"
+		buttonColor="#000000"
+	  />
 	</div>
   ),
   work: () => (
@@ -132,6 +147,15 @@ const customComponents: Record<SectionId, () => JSX.Element> = {
 		cta="Connect"
 		link="https://www.linkedin.com/in/aidenkt/"
 		buttonColor="#0A66C2"
+	  />
+	  <SocialAccount
+		src="/platform/handshake.webp"
+		name="aidenkt"
+		platform="Handshake"
+		cta="Connect"
+		link="https://app.joinhandshake.com/profiles/aidenkt"
+		buttonColor="#D3FC53"
+		textColor="black"
 	  />
 	  <SocialAccount
 		src="/platform/github.webp"
@@ -164,43 +188,47 @@ const customComponents: Record<SectionId, () => JSX.Element> = {
   ),
 };
 
-// Map query parameter names to section IDs
-const querySectionMap: Record<string, SectionId> = {
-  'primary': 'primary',
-  'text': 'text',
-  'photos': 'photos',
-  'videos': 'videos',
-  'playlists': 'playlists',
-  'music': 'playlists', // Alias for playlists
-  'work': 'work',
-  'dev': 'work', // Alias for work
-  'contact': 'contact',
+const SECTION_MENU_ID = 'section-picker-menu'
+
+type SectionPickerProps = {
+  headlineFontClassName: string
+  headlineLines: ReactNode
+  initialSection?: SectionId
+  showSectionControls?: boolean
 }
 
-export default function Component() {
-  const searchParams = useSearchParams()
-  const [activeSection, setActiveSection] = useState<SectionId>('primary')
+export default function SectionPicker({
+  headlineFontClassName,
+  headlineLines,
+  initialSection = 'primary',
+  showSectionControls = true,
+}: SectionPickerProps) {
+  const pathname = usePathname()
+  const [activeSection, setActiveSection] = useState<SectionId>(initialSection)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
-  // Handle query string parameters on mount
+  // Read query params from the URL without `useSearchParams()` (that hook suspends and can
+  // leave the route stuck on the Suspense fallback after client navigations back to `/`).
   useEffect(() => {
-    // Check for query parameters (e.g., ?work, ?music, ?contact)
-    const queryKeys = Array.from(searchParams.keys())
+    if (!showSectionControls) return
+    if (typeof window === 'undefined') return
+
+    const queryKeys = Array.from(new URLSearchParams(window.location.search).keys())
     for (const key of queryKeys) {
-      const mappedSection = querySectionMap[key.toLowerCase()]
+      const mappedSection = normalizeSectionParam(key)
       if (mappedSection) {
         setActiveSection(mappedSection)
-        break // Use the first valid query parameter
+        break
       }
     }
-  }, [searchParams])
+  }, [showSectionControls, pathname])
 
   useEffect(() => {
-	const checkIsMobile = () => setIsMobile(window.innerWidth < 768)
-	checkIsMobile()
-	window.addEventListener('resize', checkIsMobile)
-	return () => window.removeEventListener('resize', checkIsMobile)
+    const checkIsMobile = () => setIsMobile(window.innerWidth < 768)
+    checkIsMobile()
+    window.addEventListener('resize', checkIsMobile)
+    return () => window.removeEventListener('resize', checkIsMobile)
   }, [])
 
   const handleSectionChange = (sectionId: SectionId) => {
@@ -218,16 +246,70 @@ export default function Component() {
 	return sections.find((section) => section.id === activeSection)?.content
   }
 
+  const headlineEl = (
+	<p
+	  className={`${headlineFontClassName} w-full text-center text-2xl font-semibold text-neutral-900 sm:text-[1.3rem]`}
+	>
+	  {headlineLines}
+	</p>
+  )
+
+  const mobileIntroTransition = {
+	duration: 0.5,
+	ease: [0.22, 1, 0.36, 1] as const,
+  }
+
+  if (!showSectionControls) {
+	return (
+	  <div className="flex w-full min-w-0 shrink-0 flex-col gap-3 px-0 py-1 sm:gap-4">
+		<div className="relative isolate w-full overflow-hidden rounded-2xl border border-white/55 bg-white/30 p-3 shadow-[0_18px_50px_-24px_rgba(0,0,0,0.28)] ring-1 ring-black/[0.04] backdrop-blur-xl [backdrop-filter:saturate(130%)_blur(20px)]">
+		  <div
+			aria-hidden
+			className="pointer-events-none absolute inset-0 bg-[linear-gradient(140deg,rgba(255,255,255,0.26)_0%,rgba(255,255,255,0.12)_44%,rgba(255,255,255,0.08)_100%),radial-gradient(130%_65%_at_14%_-12%,rgba(255,120,185,0.12)_0%,rgba(255,120,185,0)_46%),radial-gradient(140%_80%_at_88%_0%,rgba(90,170,255,0.12)_0%,rgba(90,170,255,0)_48%),radial-gradient(160%_95%_at_58%_102%,rgba(255,210,120,0.10)_0%,rgba(255,210,120,0)_52%)]"
+		  />
+		  <div className="relative z-10 px-2 py-1 sm:py-2">{headlineEl}</div>
+		  <div className="relative z-10 mt-2 max-sm:mt-3">
+			<AnimatePresence mode="wait" initial={false}>
+			  <motion.div
+				key={activeSection}
+				initial={{ opacity: 0, y: 10, filter: 'blur(6px)' }}
+				animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+				exit={{ opacity: 0, y: -8, filter: 'blur(5px)' }}
+				transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+				className="h-full w-full"
+			  >
+				{renderContent()}
+			  </motion.div>
+			</AnimatePresence>
+		  </div>
+		</div>
+	  </div>
+	)
+  }
+
   return (
-	<div className="w-full max-w-4xl mx-auto p-4 flex flex-col h-[450px]">
-	  {isMobile ? (
-		<div className="p-2 relative mb-5 z-10">
+	<div className="flex w-full min-w-0 shrink-0 flex-col gap-3 px-0 py-1 sm:gap-4">
+	  {showSectionControls ? (isMobile ? (
+		<motion.div
+		  initial={{ opacity: 0, y: 10, scale: 0.985 }}
+		  animate={{ opacity: 1, y: 0, scale: 1 }}
+		  transition={mobileIntroTransition}
+		  className="relative z-10 mb-3 flex min-h-[9.5rem] flex-col sm:mb-4"
+		>
+		  <div className="min-h-0 flex-1" aria-hidden />
+		  <div className="shrink-0 px-2">{headlineEl}</div>
+		  <div className="min-h-0 flex-1" aria-hidden />
 		  <button
+			type="button"
 			onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-			className="w-full flex items-center justify-between px-3 py-2 bg-white border border-gray-300 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-blue-500"
+			className="flex w-full min-h-[3rem] items-center justify-between gap-3 rounded-xl border-2 border-neutral-200 bg-white px-4 py-3 text-left shadow-md transition-[transform,box-shadow,background-color,border-color] active:scale-[0.99] active:bg-neutral-50 active:shadow-sm hover:border-neutral-300 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/35 focus-visible:ring-offset-2 [-webkit-tap-highlight-color:transparent]"
+			aria-expanded={isDropdownOpen}
+			aria-haspopup="menu"
+			aria-controls={isDropdownOpen ? SECTION_MENU_ID : undefined}
+			aria-label={`Change link category (now ${activeLabel ?? 'section'})`}
 		  >
-			<span className="font-medium">{activeLabel}</span>
-			<ChevronDown className={`w-5 h-5 transition-transform duration-200 ${isDropdownOpen ? 'transform rotate-180' : ''}`} />
+			<span className="text-base font-semibold text-neutral-900">{activeLabel}</span>
+			<ChevronDown className={`h-6 w-6 shrink-0 text-neutral-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} strokeWidth={2.25} />
 		  </button>
 		  <AnimatePresence>
 			{isDropdownOpen && (
@@ -236,14 +318,19 @@ export default function Component() {
 				animate={{ opacity: 1, y: 0 }}
 				exit={{ opacity: 0, y: -10 }}
 				transition={{ duration: 0.2 }}
-				className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden"
+				id={SECTION_MENU_ID}
+				role="menu"
+				aria-label="Link categories"
+				className="absolute z-10 mt-2 w-full overflow-hidden rounded-xl border-2 border-neutral-200 bg-white py-1.5 shadow-lg"
 			  >
 				{sections.map((section) => (
 				  <button
+					type="button"
 					key={section.id}
+					role="menuitem"
 					onClick={() => handleSectionChange(section.id as SectionId)}
-					className={`w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors duration-200 ${
-					  activeSection === section.id ? 'bg-blue-50 text-blue-600' : ''
+					className={`flex min-h-[2.75rem] w-full items-center px-4 py-3 text-left text-base transition-colors duration-150 active:bg-neutral-200/80 hover:bg-neutral-100 focus:outline-none focus-visible:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foreground/20 ${
+					  activeSection === section.id ? 'bg-neutral-100 font-semibold text-black' : 'font-medium text-neutral-800'
 					}`}
 				  >
 					{section.label}
@@ -252,39 +339,75 @@ export default function Component() {
 			  </motion.div>
 			)}
 		  </AnimatePresence>
-		</div>
+		</motion.div>
 	  ) : (
-		<div className="flex justify-center mb-5 bg-gray-100 p-1 rounded-full">
-		  {sections.map((section) => (
-			<button
-			  key={section.id}
-			  onClick={() => setActiveSection(section.id as SectionId)}
-			  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
-				activeSection === section.id
-				  ? 'bg-white text-black shadow'
-				  : 'text-gray-600 hover:text-black'
-			  }`}
-			  aria-pressed={activeSection === section.id}
-			>
-			  {section.label}
-			</button>
-		  ))}
+		<div className="relative left-1/2 mb-3 hidden w-[100dvw] max-w-[100dvw] -translate-x-1/2 px-4 sm:mb-4 sm:block">
+		  <div className="relative mx-auto flex w-fit max-w-full flex-col items-center px-6 pt-3 pb-3 text-center">
+		    <div className="pointer-events-none absolute inset-x-0 top-2 h-20" aria-hidden>
+		      <div className="absolute left-1/2 top-0 h-20 w-[62%] -translate-x-1/2 rounded-[2rem] border-x border-t border-b-0 border-black/[0.05] bg-[#f7f7f7] shadow-[0_10px_24px_-18px_rgba(0,0,0,0.35)]" />
+		    </div>
+		    <div className="relative z-10 px-10 pt-1 pb-2">{headlineEl}</div>
+		    <div className="relative mx-auto w-max max-w-full">
+		      <div
+		        className="pointer-events-none absolute left-1/2 z-[11] h-[7px] w-[66.9%] -translate-x-1/2 rounded-none bg-[#f7f7f7]"
+		        style={{ top: '-5px' }}
+		        aria-hidden
+		      />
+		      <div
+		        className="pointer-events-auto relative z-10 inline-flex w-max max-w-full flex-nowrap gap-0.5 overflow-x-auto rounded-full border border-black/[0.06] bg-[#f7f7f7] px-1 py-1 shadow-[0_12px_28px_-18px_rgba(0,0,0,0.45)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+		        role="tablist"
+		      >
+			{sections.map((section) => (
+			  <button
+				type="button"
+				key={section.id}
+				onClick={() => setActiveSection(section.id as SectionId)}
+				className={`shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-xs font-medium transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/35 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-50 sm:px-4 sm:text-sm ${
+				  activeSection === section.id
+					? 'border border-neutral-200/80 bg-white text-black shadow-sm'
+					: 'text-neutral-600 hover:text-black'
+				}`}
+				aria-pressed={activeSection === section.id}
+			  >
+				{section.label}
+			  </button>
+			))}
+		      </div>
+		    </div>
+		  </div>
+		</div>
+	  )) : (
+		<div className="mb-3 px-2 py-1 sm:mb-4 sm:py-2">
+		  {headlineEl}
 		</div>
 	  )}
-	  <div className="flex-grow overflow-auto">
-		<AnimatePresence mode="wait">
-		  <motion.div
-			key={activeSection}
-			initial={{ opacity: 0 }}
-			animate={{ opacity: 1 }}
-			exit={{ opacity: 0 }}
-			transition={{ duration: 0.2 }}
-			className="p-2 rounded-lg shadow-lg h-full overflow-auto"
-		  >
+	  {isMobile ? (
+		<motion.div
+		  initial={{ opacity: 0, y: 12, scale: 0.985 }}
+		  animate={{ opacity: 1, y: 0, scale: 1 }}
+		  transition={{ ...mobileIntroTransition, delay: 0.08 }}
+		  className={SOCIAL_PANEL_SHELL_CLASS}
+		>
+		  <div key={activeSection} className="h-full w-full">
 			{renderContent()}
-		  </motion.div>
-		</AnimatePresence>
-	  </div>
+		  </div>
+		</motion.div>
+	  ) : (
+		<div className={SOCIAL_PANEL_SHELL_CLASS}>
+		  <AnimatePresence mode="wait" initial={false}>
+			<motion.div
+			  key={activeSection}
+			  initial={{ opacity: 0, y: 10, filter: 'blur(6px)' }}
+			  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+			  exit={{ opacity: 0, y: -8, filter: 'blur(5px)' }}
+			  transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+			  className="h-full w-full"
+			>
+			  {renderContent()}
+			</motion.div>
+		  </AnimatePresence>
+		</div>
+	  )}
 	</div>
   )
 }

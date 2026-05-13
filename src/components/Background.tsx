@@ -5,6 +5,10 @@ import { motion } from 'framer-motion'
 import Image from 'next/image'
 import { POST_IMAGE_NATURAL } from '../data/postImageDimensions'
 import {
+  BACKGROUND_READY_ATTR,
+  BACKGROUND_READY_EVENT,
+} from '../lib/background-ready'
+import {
   SOCIAL_LINKS_BACKGROUND_RESUME,
   consumePendingBfcacheResume,
   shouldResumeBackgroundNavigation,
@@ -22,8 +26,6 @@ const imageUrls = [
 
 const MAX_IMAGES = 24
 const INITIAL_ON_SCREEN = Math.min(12, imageUrls.length)
-const BACKGROUND_READY_EVENT = 'social-links:background-ready'
-const BACKGROUND_READY_ATTR = 'data-social-links-background-ready'
 const LIFT_MULTIPLIER = 3.6
 const SPAWN_COLLISION_PADDING = 10
 const REFILL_TICK_MS = 520
@@ -645,6 +647,8 @@ export default function FloatingImages() {
   }, [])
 
   useEffect(() => {
+    if (!isRevealReady) return
+
     let intervalId: ReturnType<typeof setInterval> | undefined
 
     const startSpawning = () => {
@@ -682,7 +686,7 @@ export default function FloatingImages() {
       stopSpawning()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [refillDensity, topUpTo])
+  }, [isRevealReady, refillDensity, topUpTo])
 
   const handleImageComplete = (id: string) => {
     setImages((prev) => prev.filter((image) => image.id !== id))
@@ -716,6 +720,7 @@ export default function FloatingImages() {
         className="absolute inset-0 z-[1] [perspective:2000px] [perspective-origin:50%_42%]"
         style={{
           opacity: isRevealReady ? 1 : 0,
+          visibility: isRevealReady ? 'visible' : 'hidden',
           filter: isRevealReady ? 'blur(0px)' : 'blur(12px)',
           transform: isRevealReady ? 'scale(1)' : 'scale(0.985)',
           transition:

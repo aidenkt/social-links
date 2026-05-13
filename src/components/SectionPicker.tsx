@@ -1,11 +1,16 @@
 'use client'
 
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, useLayoutEffect, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
 import SocialAccount from './SocialAccount'
+import SectionPickerSkeleton from './SectionPickerSkeleton'
 import { SOCIAL_PANEL_SHELL_CLASS } from '../lib/social-panel'
+import {
+  BACKGROUND_READY_ATTR,
+  BACKGROUND_READY_EVENT,
+} from '../lib/background-ready'
 import { normalizeSectionParam, type SectionId } from '../lib/sections'
 
 // Define the sections array with section IDs as 'id'
@@ -230,6 +235,34 @@ export default function SectionPicker({
     window.addEventListener('resize', checkIsMobile)
     return () => window.removeEventListener('resize', checkIsMobile)
   }, [])
+
+  const [bgReady, setBgReady] = useState(false)
+
+  useLayoutEffect(() => {
+    if (typeof document === 'undefined') return
+    if (document.documentElement.getAttribute(BACKGROUND_READY_ATTR) === '1') {
+      setBgReady(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    const onReady = () => setBgReady(true)
+    if (typeof document !== 'undefined' && document.documentElement.getAttribute(BACKGROUND_READY_ATTR) === '1') {
+      setBgReady(true)
+      return
+    }
+    window.addEventListener(BACKGROUND_READY_EVENT, onReady)
+    return () => window.removeEventListener(BACKGROUND_READY_EVENT, onReady)
+  }, [])
+
+  if (!bgReady) {
+    return (
+      <SectionPickerSkeleton
+        headlineFontClassName={headlineFontClassName}
+        headlineLines={headlineLines}
+      />
+    )
+  }
 
   const handleSectionChange = (sectionId: SectionId) => {
 	setActiveSection(sectionId)

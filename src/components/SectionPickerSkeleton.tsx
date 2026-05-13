@@ -13,7 +13,7 @@ export default function SectionPickerSkeleton({
   return (
     <div
       className="flex w-full min-w-0 shrink-0 flex-col gap-3 px-0 py-1 sm:gap-4"
-      aria-hidden
+      aria-busy="true"
     >
       <div className="relative z-10 mb-3 flex min-h-[9.5rem] flex-col sm:hidden">
         <div className="min-h-0 flex-1" aria-hidden />

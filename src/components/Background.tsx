@@ -28,7 +28,9 @@ const MAX_IMAGES = 24
 const INITIAL_ON_SCREEN = Math.min(12, imageUrls.length)
 const LIFT_MULTIPLIER = 3.6
 const SPAWN_COLLISION_PADDING = 10
-const REFILL_TICK_MS = 520
+/** Desktop refill interval; mobile uses a shorter tick in the spawn effect. */
+const REFILL_TICK_MS_DESKTOP = 520
+const REFILL_TICK_MS_NARROW = 240
 
 interface FloatingImage {
   id: string
@@ -154,8 +156,8 @@ function getDisplayWidthBounds(ww: number): { min: number; max: number } {
 }
 
 function getTargetDensity(ww: number): number {
-  if (ww < 420) return 8
-  if (ww < 768) return 10
+  if (ww < 420) return 11
+  if (ww < 768) return 14
   if (ww < 1200) return 13
   return 16
 }
@@ -423,7 +425,7 @@ function trySpawnUnusedImage(
 
 function buildInitialBatch(ww: number, wh: number): FloatingImage[] {
   const used = new Set<string>()
-  const initialCount = ww < 768 ? Math.min(9, INITIAL_ON_SCREEN) : INITIAL_ON_SCREEN
+  const initialCount = ww < 768 ? Math.min(10, INITIAL_ON_SCREEN) : INITIAL_ON_SCREEN
   const out: FloatingImage[] = []
   let guard = 0
   while (out.length < initialCount && guard < 80) {
@@ -452,6 +454,7 @@ export default function FloatingImages() {
   const [isRevealReady, setIsRevealReady] = useState(false)
   /** Bumped on bfcache restore so floaters remount and replay `initial` → `animate` like a fresh load. */
   const [sceneKey, setSceneKey] = useState(0)
+  const [narrowViewport, setNarrowViewport] = useState(false)
   const imagesRef = useRef<FloatingImage[]>([])
   const initialImageIdsRef = useRef<Set<string>>(new Set())
   const loadedInitialImageIdsRef = useRef<Set<string>>(new Set())
@@ -566,6 +569,7 @@ export default function FloatingImages() {
     const measure = () => {
       const ww = window.innerWidth
       const wh = window.innerHeight
+      setNarrowViewport(ww < 768)
       setWindowHeight(wh)
 
       setImages((prev) => {
@@ -654,7 +658,10 @@ export default function FloatingImages() {
     const startSpawning = () => {
       if (intervalId != null) return
       refillDensity()
-      intervalId = setInterval(refillDensity, REFILL_TICK_MS)
+      intervalId = setInterval(
+        refillDensity,
+        narrowViewport ? REFILL_TICK_MS_NARROW : REFILL_TICK_MS_DESKTOP
+      )
     }
 
     const stopSpawning = () => {
@@ -686,7 +693,7 @@ export default function FloatingImages() {
       stopSpawning()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [isRevealReady, refillDensity, topUpTo])
+  }, [isRevealReady, narrowViewport, refillDensity, topUpTo])
 
   const handleImageComplete = (id: string) => {
     setImages((prev) => prev.filter((image) => image.id !== id))
@@ -708,11 +715,19 @@ export default function FloatingImages() {
   return (
     <div className="pointer-events-none fixed inset-0 overflow-hidden">
       <div
-        className="absolute inset-0 z-0 bg-gradient-to-b from-sky-100/[0.22] via-transparent to-amber-950/[0.12]"
+        className={
+          narrowViewport
+            ? 'absolute inset-0 z-0 bg-gradient-to-b from-sky-100/[0.3] via-transparent to-amber-900/[0.055]'
+            : 'absolute inset-0 z-0 bg-gradient-to-b from-sky-100/[0.22] via-transparent to-amber-950/[0.12]'
+        }
         aria-hidden
       />
       <div
-        className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_85%_55%_at_50%_-5%,rgba(255,255,255,0.45),transparent_55%)]"
+        className={
+          narrowViewport
+            ? 'absolute inset-0 z-0 bg-[radial-gradient(ellipse_85%_55%_at_50%_-5%,rgba(255,255,255,0.52),transparent_55%)]'
+            : 'absolute inset-0 z-0 bg-[radial-gradient(ellipse_85%_55%_at_50%_-5%,rgba(255,255,255,0.45),transparent_55%)]'
+        }
         aria-hidden
       />
 
@@ -748,7 +763,8 @@ export default function FloatingImages() {
               const zLayer = byId.get(image.id) ?? 8
               const d = image.depth
               const blurPx = (1 - d) * 5.5
-              const brightness = 0.78 + d * 0.26
+              const brightnessLift = narrowViewport ? 0.07 : 0
+              const brightness = brightnessLift + 0.78 + d * 0.26
               const saturate = 0.88 + d * 0.16
               const vw = typeof window !== 'undefined' ? window.innerWidth : 1
               const centerNormRaw = ((image.x + image.width / 2) - vw / 2) / Math.max(1, vw / 2)
@@ -764,7 +780,7 @@ export default function FloatingImages() {
               const duration = Math.max(14, baseDuration * (1 - p0))
               const shadowY = 10 + d * 36
               const shadowBlur = 18 + d * 52
-              const shadowAlpha = 0.12 + d * 0.32
+              const shadowAlpha = narrowViewport ? 0.08 + d * 0.22 : 0.12 + d * 0.32
               const rim = 0.06 + d * 0.14
               const scaleA = 0.68 + d * 0.42
               const scaleB = 0.74 + d * 0.38
@@ -814,7 +830,11 @@ export default function FloatingImages() {
                   className="pointer-events-none select-none"
                 >
                   <div
-                    className="flex h-full w-full items-center justify-center bg-neutral-900/15"
+                    className={
+                      narrowViewport
+                        ? 'flex h-full w-full items-center justify-center bg-neutral-900/[0.07]'
+                        : 'flex h-full w-full items-center justify-center bg-neutral-900/15'
+                    }
                     style={{
                       transformStyle: 'preserve-3d',
                       borderRadius: 12,
@@ -854,11 +874,19 @@ export default function FloatingImages() {
       </div>
 
       <div
-        className="absolute inset-0 z-[2] shadow-[inset_0_0_100px_rgba(0,0,0,0.14),inset_0_-80px_140px_rgba(0,0,0,0.18)]"
+        className={
+          narrowViewport
+            ? 'absolute inset-0 z-[2] shadow-[inset_0_0_80px_rgba(0,0,0,0.07),inset_0_-60px_100px_rgba(0,0,0,0.1)]'
+            : 'absolute inset-0 z-[2] shadow-[inset_0_0_100px_rgba(0,0,0,0.14),inset_0_-80px_140px_rgba(0,0,0,0.18)]'
+        }
         aria-hidden
       />
       <div
-        className="absolute inset-0 z-[3] bg-gradient-to-t from-black/[0.08] via-transparent to-white/[0.04]"
+        className={
+          narrowViewport
+            ? 'absolute inset-0 z-[3] bg-gradient-to-t from-black/[0.045] via-transparent to-white/[0.055]'
+            : 'absolute inset-0 z-[3] bg-gradient-to-t from-black/[0.08] via-transparent to-white/[0.04]'
+        }
         aria-hidden
       />
     </div>

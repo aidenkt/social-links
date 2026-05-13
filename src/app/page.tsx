@@ -18,7 +18,7 @@ const headlineLines = (
 
 export default function Home() {
   return (
-    <div className="relative grid min-h-screen w-full max-w-full grid-rows-[auto_minmax(0,1fr)_auto] items-center justify-items-center gap-8 overflow-x-visible pb-28 sm:grid-rows-[20px_minmax(0,1fr)_20px] sm:gap-12 sm:p-20 sm:pb-24">
+    <div className="relative grid h-full min-h-0 w-full max-w-full grid-rows-[auto_minmax(0,1fr)_auto] items-center justify-items-center gap-4 overflow-x-visible overflow-y-hidden pb-6 max-md:max-h-[100dvh] max-md:overscroll-none sm:min-h-screen sm:max-h-none sm:grid-rows-[20px_minmax(0,1fr)_20px] sm:gap-12 sm:overflow-x-visible sm:overflow-y-visible sm:p-20 sm:pb-24">
       <BackgroundRoot />
 
       <main className="row-start-2 z-10 flex min-h-0 w-full max-w-md flex-col justify-self-center px-4 pt-6 max-sm:pt-10 sm:px-0 sm:pt-4">

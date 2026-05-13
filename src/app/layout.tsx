@@ -54,7 +54,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html
+      lang="en"
+      className="max-md:h-[100dvh] max-md:max-h-[100dvh] max-md:overflow-hidden max-md:overscroll-none"
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: bgPageshowScript }} />
         {PLATFORM_ICON_PATHS.map((href) => (
@@ -62,10 +65,12 @@ export default function RootLayout({
         ))}
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased max-md:h-full max-md:min-h-0 max-md:overflow-hidden max-md:overscroll-none`}
       >
-        {children}
-        <Analytics />
+        <div className="max-md:h-full max-md:min-h-0 max-md:max-h-[100dvh] max-md:overflow-hidden max-md:overscroll-none sm:contents">
+          {children}
+          <Analytics />
+        </div>
       </body>
     </html>
   );

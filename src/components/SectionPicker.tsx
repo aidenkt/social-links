@@ -457,16 +457,18 @@ export default function SectionPicker({
 		  {headlineEl}
 		</div>
 	  )}
-	  <div className={`${socialPanelShellClass} hidden md:flex`}>
+	  <div className={`${socialPanelShellClass} max-md:hidden`}>
 		  <div aria-hidden className={GLASS_PANEL_SHIM_CLASS} />
 		  <div aria-hidden className={GLASS_PANEL_BRAND_TINT_CLASS} />
-		  <div className={SOCIAL_LIST_SLOT_CLASS}>
-		    <AnimatePresence mode="wait" initial={false}>
-		      <SocialListSectionLayer key={activeSection} sectionId={activeSection}>
-		        {renderContent()}
-		      </SocialListSectionLayer>
-		    </AnimatePresence>
-		</div>
+		  <div className="relative z-10 w-full">
+		    <div className={SOCIAL_LIST_SLOT_CLASS}>
+		      <AnimatePresence mode="wait" initial={false}>
+		        <SocialListSectionLayer key={activeSection} sectionId={activeSection}>
+		          {renderContent()}
+		        </SocialListSectionLayer>
+		      </AnimatePresence>
+		    </div>
+		  </div>
 	  </div>
 	</div>
   )

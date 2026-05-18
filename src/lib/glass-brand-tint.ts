@@ -2,10 +2,20 @@ const CLEAR_DELAY_MS = 80
 
 const clearTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>()
 
+/** Prefer the visible CTA link (desktop pill vs mobile full-card overlay). */
+function getBrandTintAnchor(row: HTMLElement): HTMLElement | null {
+  for (const anchor of row.querySelectorAll('a[href]')) {
+    if (anchor instanceof HTMLElement && anchor.getClientRects().length > 0) {
+      return anchor
+    }
+  }
+  return null
+}
+
 function updatePanelTint(panel: HTMLElement, row: HTMLElement, brandColor: string) {
   panel.style.setProperty('--panel-brand-color', brandColor)
 
-  const cta = row.querySelector('a')
+  const cta = getBrandTintAnchor(row)
   if (!cta) return
 
   const panelRect = panel.getBoundingClientRect()

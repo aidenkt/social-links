@@ -38,9 +38,9 @@ function SocialAccountRowSkeleton() {
       <div className="flex-shrink-0">
         <div className="h-[50px] w-[50px] animate-pulse rounded-[22%] bg-neutral-200 shadow-sm ring-1 ring-black/[0.06]" />
       </div>
-      <div className="flex min-w-0 flex-1 flex-col justify-center">
-        <div className="h-6 max-w-[min(100%,14rem)] animate-pulse rounded bg-neutral-200/90" />
-        <div className="mt-0.5 h-5 max-w-[min(100%,10rem)] animate-pulse rounded bg-neutral-200/75" />
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+        <div className="h-4 w-[80%] max-w-[12.5rem] animate-pulse rounded-sm bg-neutral-200/90" />
+        <div className="h-3.5 w-[52%] max-w-[7.5rem] animate-pulse rounded-sm bg-neutral-200/75" />
       </div>
       <div className="min-w-0 flex-grow" />
       <div className="h-9 min-w-[5.75rem] shrink-0 animate-pulse rounded-full bg-neutral-200" />

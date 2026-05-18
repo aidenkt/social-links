@@ -30,11 +30,21 @@ const INITIAL_ON_SCREEN = Math.min(12, imageUrls.length)
 const MIN_VISIBLE_AT_LOAD = 6
 /** Viewport-height bands for initial spread (not progress lanes). */
 const INITIAL_VIEWPORT_BANDS = 5
-const LIFT_MULTIPLIER = 3.6
+/** Upward drift duration (seconds) — higher = slower float. */
+const UPWARD_DRIFT_DURATION_BASE = 55
+const UPWARD_DRIFT_DURATION_DEPTH_SPAN = 66
+const UPWARD_DRIFT_DURATION_MIN = 16
 const SPAWN_COLLISION_PADDING = 10
-/** Desktop refill interval; mobile uses a shorter tick in the spawn effect. */
+/** Extra separation for initial on-screen batch (visible cards overlap more noticeably). */
+const INITIAL_COLLISION_PADDING = 28
+/** Typical roll (deg) when width/roll are not known yet (spawn planning). */
+const TYPICAL_ROLL_ESTIMATE_DEG = 10
+/** Desktop refill interval; mobile ticks more often but spawns fewer per tick. */
 const REFILL_TICK_MS_DESKTOP = 520
-const REFILL_TICK_MS_NARROW = 240
+const REFILL_TICK_MS_NARROW = 380
+const REFILL_SPAWN_MAX_PER_TICK_NARROW = 1
+const REFILL_SPAWN_MAX_PER_TICK_DESKTOP = 3
+const REFILL_SPAWN_MAX_TOPUP_NARROW = 2
 
 interface FloatingImage {
   id: string
@@ -67,38 +77,61 @@ function pickRollMagnitude(): number {
   return 5 + Math.random() * 8
 }
 
+/** Screen-side signal from card position (outer edge weighted for wide cards). */
+function getImageSideNorm(
+  x: number,
+  width: number,
+  ww: number
+): { centerNorm: number; sideStrength: number } {
+  const wwHalf = Math.max(1, ww / 2)
+  const centerX = x + width / 2
+  const centerNormRaw = (centerX - ww / 2) / wwHalf
+  const halfWidthNorm = (width / 2) / wwHalf
+  // Bias toward the edge nearer the screen rim so wide cards read as left/right correctly.
+  const outerEdgeNorm =
+    centerNormRaw >= 0
+      ? centerNormRaw + halfWidthNorm * 0.45
+      : centerNormRaw - halfWidthNorm * 0.45
+  const centerNorm = Math.max(-1, Math.min(1, outerEdgeNorm))
+  const sideStrength = Math.pow(Math.abs(centerNorm), 0.55)
+  return { centerNorm, sideStrength }
+}
+
 function pickRollDirection(
   ww: number,
   x: number,
   width: number,
-  y: number,
-  existingImages: FloatingImage[]
+  displayHeight: number,
+  progress0: number,
+  existingImages: FloatingImage[],
+  wh: number
 ): 1 | -1 {
-  const centerNormRaw = ((x + width / 2) - ww / 2) / Math.max(1, ww / 2)
-  const centerNorm = Math.max(-1, Math.min(1, centerNormRaw))
-  const sideStrength = Math.abs(centerNorm)
+  const { centerNorm, sideStrength } = getImageSideNorm(x, width, ww)
 
   // Left: negative roll; right: positive. Stronger toward edges, looser near center.
   const sideSign =
     centerNorm === 0 ? (Math.random() < 0.5 ? 1 : -1) : Math.sign(centerNorm)
-  const sideClockwiseBase = 0.5 + sideSign * Math.pow(sideStrength, 0.88) * 0.48
+  const sideClockwiseBase = 0.5 + sideSign * sideStrength * 0.49
 
   const clockwiseCount = existingImages.filter((img) => img.roll > 0).length
   const counterClockwiseCount = existingImages.length - clockwiseCount
   const total = clockwiseCount + counterClockwiseCount
-  const balanceClockwise = total > 0 ? 0.5 + (counterClockwiseCount - clockwiseCount) / (total * 3.2) : 0.5
+  const balanceClockwise = total > 0 ? 0.5 + (counterClockwiseCount - clockwiseCount) / (total * 4.5) : 0.5
 
-  // Prefer alternating with the image above in the same band (mild — side bias wins at edges).
   const centerX = x + width / 2
   const bandHalfWidth = Math.max(80, width * 0.75)
+  const spawnCenterY =
+    getSpawnTopY(wh, displayHeight, progress0, width, TYPICAL_ROLL_ESTIMATE_DEG) +
+    displayHeight / 2
   let nearestAbove: FloatingImage | null = null
   let nearestScore = Infinity
   for (const img of existingImages) {
     const imgCenterX = img.x + img.width / 2
     const xDelta = Math.abs(imgCenterX - centerX)
     if (xDelta > bandHalfWidth) continue
-    if (img.y >= y) continue
-    const yDelta = y - img.y
+    const imgCenterY = getImageViewportCenterY(img, wh)
+    if (imgCenterY >= spawnCenterY - 16) continue
+    const yDelta = spawnCenterY - imgCenterY
     const score = yDelta + xDelta * 0.9
     if (score < nearestScore) {
       nearestScore = score
@@ -110,18 +143,17 @@ function pickRollDirection(
     nearestAbove == null
       ? 0.5
       : nearestAbove.roll > 0
-        ? 0.28
-        : 0.72
+        ? 0.2
+        : 0.8
 
-  // Edge spawns: mostly side-correct. Center spawns: more alternation / balance.
-  const sideWeight = 0.34 + sideStrength * 0.58
-  const alternateWeight = (1 - sideStrength) * 0.26
-  const balanceWeight = (1 - sideStrength) * 0.1
+  const sideWeight = 0.68 + sideStrength * 0.32
+  const alternateWeight = (1 - sideStrength) * 0.1
+  const balanceWeight = (1 - sideStrength) * 0.04
   const blendTotal = sideWeight + alternateWeight + balanceWeight
   const clockwiseProbability = Math.max(
-    0.05,
+    0.03,
     Math.min(
-      0.95,
+      0.97,
       (sideClockwiseBase * sideWeight +
         alternateClockwise * alternateWeight +
         balanceClockwise * balanceWeight) /
@@ -195,14 +227,58 @@ function getSpawnBaseY(wh: number, displayHeight: number): number {
   return legacy
 }
 
-function getSpawnTopY(wh: number, height: number, progress0: number): number {
+/** Total upward travel (progress 0 → 1): spawn below the fold, exit above the top edge. */
+function getFloatLift(
+  wh: number,
+  displayHeight: number,
+  displayWidth: number,
+  rollDeg: number
+): number {
+  const baseY = getSpawnBaseY(wh, displayHeight)
+  const aabb = getRotatedAabbSize(displayWidth, displayHeight, rollDeg)
+  const exitClearance = Math.max(96, wh * 0.14) + aabb.height
+  return baseY + exitClearance
+}
+
+/** Max spawn progress so the card is still fully below the viewport (refill entry only). */
+function getMaxBelowFoldProgress0(
+  wh: number,
+  displayHeight: number,
+  displayWidth: number,
+  rollDeg: number
+): number {
+  const baseY = getSpawnBaseY(wh, displayHeight)
+  const lift = getFloatLift(wh, displayHeight, displayWidth, rollDeg)
+  if (lift <= 0) return 0
+  const aabb = getRotatedAabbSize(displayWidth, displayHeight, rollDeg)
+  const belowFoldTop = wh + Math.max(24, wh * 0.03)
+  const maxP = (baseY - (belowFoldTop + aabb.height * 0.08)) / lift
+  return Math.max(0, Math.min(0.14, maxP))
+}
+
+function getOffscreenRefillProgressRange(wh: number, ww: number): { minP: number; maxP: number } {
+  const { min, max } = getDisplayWidthBounds(ww)
+  const width = Math.round((min + max) / 2)
+  const height = getTypicalDisplayHeight(ww)
+  const maxP = getMaxBelowFoldProgress0(wh, height, width, TYPICAL_ROLL_ESTIMATE_DEG)
+  return { minP: 0, maxP: Math.max(0.01, maxP * 0.92) }
+}
+
+function getSpawnTopY(
+  wh: number,
+  height: number,
+  progress0: number,
+  width?: number,
+  rollDeg = TYPICAL_ROLL_ESTIMATE_DEG
+): number {
+  const w = width ?? Math.round(height * 0.72)
   const baseY = getSpawnBaseY(wh, height)
-  const lift = wh + height * LIFT_MULTIPLIER
+  const lift = getFloatLift(wh, height, w, rollDeg)
   return baseY - lift * progress0
 }
 
 function getFloatingImageTopY(img: FloatingImage, wh: number): number {
-  const lift = wh + img.height * LIFT_MULTIPLIER
+  const lift = getFloatLift(wh, img.height, img.width, img.roll)
   return img.y - lift * img.progress0
 }
 
@@ -225,10 +301,12 @@ function getTypicalDisplayHeight(ww: number): number {
 
 function getVisibleProgressRange(
   wh: number,
-  height: number
+  height: number,
+  width?: number
 ): { minP: number; maxP: number } {
+  const w = width ?? Math.round(height * 0.72)
   const baseY = getSpawnBaseY(wh, height)
-  const lift = wh + height * LIFT_MULTIPLIER
+  const lift = getFloatLift(wh, height, w, TYPICAL_ROLL_ESTIMATE_DEG)
   const minTop = wh * 0.04
   const maxTop = wh * 0.92
   const maxP = (baseY - minTop) / lift
@@ -239,9 +317,15 @@ function getVisibleProgressRange(
   }
 }
 
-function progressForViewportCenterY(wh: number, height: number, targetCenterY: number): number {
+function progressForViewportCenterY(
+  wh: number,
+  height: number,
+  targetCenterY: number,
+  width?: number
+): number {
+  const w = width ?? Math.round(height * 0.72)
   const baseY = getSpawnBaseY(wh, height)
-  const lift = wh + height * LIFT_MULTIPLIER
+  const lift = getFloatLift(wh, height, w, TYPICAL_ROLL_ESTIMATE_DEG)
   return (baseY + height * 0.5 - targetCenterY) / lift
 }
 
@@ -312,17 +396,71 @@ function pickUnderfilledViewportBand(
   return bestBand
 }
 
-function setImageToViewportBand(
+function getPlacementCenter(
+  x: number,
+  width: number,
+  height: number,
+  roll: number,
+  progress0: number,
+  wh: number
+): { x: number; y: number } {
+  const aabb = getRotatedAabbSize(width, height, roll)
+  const top = getSpawnTopY(wh, height, progress0, width, roll)
+  return { x: x + width / 2, y: top + aabb.height / 2 }
+}
+
+function hasImageCollision(
+  img: FloatingImage,
+  others: FloatingImage[],
+  wh: number,
+  padding = SPAWN_COLLISION_PADDING
+): boolean {
+  const aabb = getRotatedAabbSize(img.width, img.height, img.roll)
+  const center = getPlacementCenter(img.x, img.width, img.height, img.roll, img.progress0, wh)
+  const halfW = aabb.width / 2
+  const halfH = aabb.height / 2
+
+  for (const other of others) {
+    if (other.id === img.id) continue
+    const otherAabb = getRotatedAabbSize(other.width, other.height, other.roll)
+    const otherCenter = getPlacementCenter(
+      other.x,
+      other.width,
+      other.height,
+      other.roll,
+      other.progress0,
+      wh
+    )
+    const overlapX =
+      Math.abs(center.x - otherCenter.x) < halfW + otherAabb.width / 2 + padding
+    const overlapY =
+      Math.abs(center.y - otherCenter.y) < halfH + otherAabb.height / 2 + padding
+    if (overlapX && overlapY) return true
+  }
+  return false
+}
+
+/** Place into a viewport band only if it does not overlap existing images. */
+function tryPlaceImageInViewportBand(
   img: FloatingImage,
   wh: number,
+  ww: number,
   bandIndex: number,
-  bandCount: number
-): void {
+  bandCount: number,
+  existing: FloatingImage[]
+): boolean {
+  const others = existing.filter((other) => other.id !== img.id)
   const centerY = getViewportBandCenterY(wh, bandIndex, bandCount)
-  const { minP, maxP } = getVisibleProgressRange(wh, img.height)
-  const targetP = progressForViewportCenterY(wh, img.height, centerY)
-  const jitter = (Math.random() - 0.5) * 0.035
-  img.progress0 = Math.min(maxP, Math.max(minP, targetP + jitter))
+  const { minP, maxP } = getVisibleProgressRange(wh, img.height, img.width)
+  const targetP = progressForViewportCenterY(wh, img.height, centerY, img.width)
+
+  for (let attempt = 0; attempt < 16; attempt++) {
+    const jitter = (Math.random() - 0.5) * (0.03 + attempt * 0.018)
+    img.progress0 = Math.min(maxP, Math.max(minP, targetP + jitter))
+    nudgeImageOffCenter(img, ww, existing)
+    if (!hasImageCollision(img, others, wh, INITIAL_COLLISION_PADDING)) return true
+  }
+  return false
 }
 
 function getCenterAvoidHalfWidth(ww: number): number {
@@ -346,8 +484,44 @@ function nudgeImageOffCenter(img: FloatingImage, ww: number, existingImages: Flo
   img.x = pickSpreadX(ww, img.width, img.height, others, true, img.roll)
 }
 
+/** Last-resort nudge for any remaining initial overlaps after band placement. */
+function resolveInitialOverlaps(images: FloatingImage[], wh: number, ww: number): void {
+  const padding = INITIAL_COLLISION_PADDING
+  for (let pass = 0; pass < 48; pass++) {
+    let resolved = false
+    for (let i = 0; i < images.length; i++) {
+      for (let j = i + 1; j < images.length; j++) {
+        const a = images[i]
+        const b = images[j]
+        if (!hasImageCollision(b, [a], wh, padding)) continue
+        const mover = images[j]
+        const others = images.filter((img) => img.id !== mover.id)
+        const savedP = mover.progress0
+        const savedX = mover.x
+        const { minP } = getVisibleProgressRange(wh, mover.height, mover.width)
+        mover.progress0 = Math.max(minP, mover.progress0 - 0.05 - pass * 0.008)
+        nudgeImageOffCenter(mover, ww, images)
+        if (!hasImageCollision(mover, others, wh, padding)) {
+          resolved = true
+          continue
+        }
+        mover.progress0 = savedP
+        mover.x = Math.min(ww - mover.width - 8, savedX + 20 + pass * 4)
+        nudgeImageOffCenter(mover, ww, images)
+        if (!hasImageCollision(mover, others, wh, padding)) {
+          resolved = true
+          continue
+        }
+        mover.progress0 = savedP
+        mover.x = savedX
+      }
+    }
+    if (!resolved) break
+  }
+}
+
 /** Spread images across viewport-height bands (progress only — never moves X). */
-function fillEmptyInitialViewportBands(images: FloatingImage[], wh: number): void {
+function fillEmptyInitialViewportBands(images: FloatingImage[], wh: number, ww: number): void {
   const bandCount = INITIAL_VIEWPORT_BANDS
   let counts = countViewportBandOccupancy(images, wh, bandCount)
 
@@ -363,7 +537,10 @@ function fillEmptyInitialViewportBands(images: FloatingImage[], wh: number): voi
         }
       }
       if (donorIndex < 0 || donorCount < 2) break
-      setImageToViewportBand(images[donorIndex], wh, band, bandCount)
+      const donor = images[donorIndex]
+      if (!tryPlaceImageInViewportBand(donor, wh, ww, band, bandCount, images)) {
+        break
+      }
       counts = countViewportBandOccupancy(images, wh, bandCount)
     }
   }
@@ -378,8 +555,15 @@ function nudgeInitialVisibility(images: FloatingImage[], wh: number): void {
   for (const img of sorted) {
     if (visible >= MIN_VISIBLE_AT_LOAD) break
     if (isVisibleAtLoad(img, wh)) continue
-    const { maxP } = getVisibleProgressRange(wh, img.height)
-    img.progress0 = Math.min(maxP, img.progress0 + 0.14)
+    const { maxP } = getVisibleProgressRange(wh, img.height, img.width)
+    const others = images.filter((other) => other.id !== img.id)
+    const savedP = img.progress0
+    const nextP = Math.min(maxP, img.progress0 + 0.12)
+    img.progress0 = nextP
+    if (hasImageCollision(img, others, wh, INITIAL_COLLISION_PADDING)) {
+      img.progress0 = savedP
+      continue
+    }
     if (isVisibleAtLoad(img, wh)) visible++
   }
 }
@@ -387,23 +571,35 @@ function nudgeInitialVisibility(images: FloatingImage[], wh: number): void {
 function hasSpawnCollision(
   candidate: { x: number; width: number; height: number; roll: number; progress0: number },
   existingImages: FloatingImage[],
-  wh: number
+  wh: number,
+  padding = SPAWN_COLLISION_PADDING
 ): boolean {
   const candidateAabb = getRotatedAabbSize(candidate.width, candidate.height, candidate.roll)
+  const center = getPlacementCenter(
+    candidate.x,
+    candidate.width,
+    candidate.height,
+    candidate.roll,
+    candidate.progress0,
+    wh
+  )
   const cHalfW = candidateAabb.width / 2
   const cHalfH = candidateAabb.height / 2
-  const cCenterX = candidate.x + candidate.width / 2
-  const cCenterY = getSpawnTopY(wh, candidate.height, candidate.progress0) + candidate.height / 2
 
   for (const img of existingImages) {
     const imgAabb = getRotatedAabbSize(img.width, img.height, img.roll)
-    const iHalfW = imgAabb.width / 2
-    const iHalfH = imgAabb.height / 2
-    const iCenterX = img.x + img.width / 2
-    const iCenterY = getSpawnTopY(wh, img.height, img.progress0) + img.height / 2
-
-    const overlapX = Math.abs(cCenterX - iCenterX) < cHalfW + iHalfW + SPAWN_COLLISION_PADDING
-    const overlapY = Math.abs(cCenterY - iCenterY) < cHalfH + iHalfH + SPAWN_COLLISION_PADDING
+    const imgCenter = getPlacementCenter(
+      img.x,
+      img.width,
+      img.height,
+      img.roll,
+      img.progress0,
+      wh
+    )
+    const overlapX =
+      Math.abs(center.x - imgCenter.x) < cHalfW + imgAabb.width / 2 + padding
+    const overlapY =
+      Math.abs(center.y - imgCenter.y) < cHalfH + imgAabb.height / 2 + padding
     if (overlapX && overlapY) return true
   }
   return false
@@ -556,7 +752,8 @@ function buildFloatingImage(
   used: Set<string>,
   progress0: number,
   existingImages: FloatingImage[],
-  avoidCenterBand = false
+  avoidCenterBand = false,
+  entryMode: 'initial' | 'refill' = 'refill'
 ): FloatingImage | null {
   if (used.has(src)) return null
   const meta = POST_IMAGE_NATURAL[src]
@@ -576,14 +773,29 @@ function buildFloatingImage(
     const x = pickSpreadX(ww, displayWidth, displayHeight, existingImages, avoidCenterBand, provisionalRoll)
     const y = getSpawnBaseY(wh, displayHeight)
     const rollMagnitude = pickRollMagnitude()
-    const rollDirection = pickRollDirection(ww, x, displayWidth, y, existingImages)
+    const rollDirection = pickRollDirection(
+      ww,
+      x,
+      displayWidth,
+      displayHeight,
+      progress0,
+      existingImages,
+      wh
+    )
     const roll = rollDirection * rollMagnitude
+    const finalP0 =
+      entryMode === 'refill'
+        ? Math.min(progress0, getMaxBelowFoldProgress0(wh, displayHeight, displayWidth, roll))
+        : progress0
 
+    const collisionPadding =
+      entryMode === 'initial' ? INITIAL_COLLISION_PADDING : SPAWN_COLLISION_PADDING
     if (
       hasSpawnCollision(
-        { x, width: displayWidth, height: displayHeight, roll, progress0 },
+        { x, width: displayWidth, height: displayHeight, roll, progress0: finalP0 },
         existingImages,
-        wh
+        wh,
+        collisionPadding
       )
     ) {
       continue
@@ -601,7 +813,7 @@ function buildFloatingImage(
       naturalHeight: naturalH,
       depth,
       roll,
-      progress0,
+      progress0: finalP0,
     }
   }
 
@@ -615,12 +827,22 @@ function trySpawnUnusedImage(
   used: Set<string>,
   progress0: number,
   existingImages: FloatingImage[],
-  avoidCenterBand: boolean
+  avoidCenterBand: boolean,
+  entryMode: 'initial' | 'refill' = 'refill'
 ): boolean {
   const unused = imageUrls.filter((u) => !used.has(u))
   if (unused.length === 0) return false
   for (const src of shuffle(unused)) {
-    const img = buildFloatingImage(src, ww, wh, used, progress0, existingImages, avoidCenterBand)
+    const img = buildFloatingImage(
+      src,
+      ww,
+      wh,
+      used,
+      progress0,
+      existingImages,
+      avoidCenterBand,
+      entryMode
+    )
     if (img) {
       used.add(src)
       existingImages.push(img)
@@ -630,12 +852,32 @@ function trySpawnUnusedImage(
   return false
 }
 
+function spawnRefillImages(
+  ww: number,
+  wh: number,
+  next: FloatingImage[],
+  used: Set<string>,
+  targetCount: number,
+  maxSpawn: number,
+  avoidCenterBand: boolean
+): void {
+  let spawned = 0
+  let guard = 0
+  while (next.length < targetCount && spawned < maxSpawn && guard < 80) {
+    guard++
+    const progress0 = pickSpreadProgress(next, getOffscreenRefillProgressRange(wh, ww))
+    if (!trySpawnUnusedImage(ww, wh, used, progress0, next, avoidCenterBand, 'refill')) break
+    spawned++
+  }
+}
+
 function buildInitialBatch(ww: number, wh: number): FloatingImage[] {
   const used = new Set<string>()
-  const targetCount = ww < 768 ? Math.min(10, INITIAL_ON_SCREEN) : INITIAL_ON_SCREEN
+  const targetCount =
+    ww < 420 ? 8 : ww < 768 ? Math.min(9, INITIAL_ON_SCREEN) : INITIAL_ON_SCREEN
   const out: FloatingImage[] = []
   let guard = 0
-  const maxGuard = 240
+  const maxGuard = 320
 
   while (out.length < targetCount && guard < maxGuard) {
     guard++
@@ -653,15 +895,19 @@ function buildInitialBatch(ww: number, wh: number): FloatingImage[] {
       Math.max(minP, progressForViewportCenterY(wh, approxHeight, centerY) + jitter)
     )
 
-    if (!trySpawnUnusedImage(ww, wh, used, p0, out, true)) continue
+    if (!trySpawnUnusedImage(ww, wh, used, p0, out, true, 'initial')) continue
 
     const img = out[out.length - 1]
-    setImageToViewportBand(img, wh, targetBand, bandCount)
-    nudgeImageOffCenter(img, ww, out)
+    if (!tryPlaceImageInViewportBand(img, wh, ww, targetBand, bandCount, out)) {
+      out.pop()
+      used.delete(img.src)
+      continue
+    }
   }
 
-  fillEmptyInitialViewportBands(out, wh)
+  fillEmptyInitialViewportBands(out, wh, ww)
   nudgeInitialVisibility(out, wh)
+  resolveInitialOverlaps(out, wh, ww)
   return out
 }
 
@@ -817,8 +1063,7 @@ export default function FloatingImages() {
             width: nextW,
             height: nextH,
             x: Math.min(maxX, Math.max(8, img.x)),
-            // Keep image just below viewport if it was waiting to enter.
-            y: img.y < 120 ? 120 : img.y,
+            y: getSpawnBaseY(wh, nextH),
           }
         })
       })
@@ -850,11 +1095,9 @@ export default function FloatingImages() {
 
       const used = new Set(prev.map((p) => p.src))
       const next = [...prev]
-      let guard = 0
-      while (next.length < target && guard < 80) {
-        guard++
-        if (!trySpawnUnusedImage(ww, wh, used, 0, next, false)) break
-      }
+      const maxSpawn =
+        ww < 768 ? REFILL_SPAWN_MAX_PER_TICK_NARROW : REFILL_SPAWN_MAX_PER_TICK_DESKTOP
+      spawnRefillImages(ww, wh, next, used, target, maxSpawn, false)
       return next
     })
   }, [])
@@ -868,13 +1111,8 @@ export default function FloatingImages() {
       if (prev.length >= targetCount) return prev
       const used = new Set(prev.map((p) => p.src))
       const next = [...prev]
-
-      let guard = 0
-      while (next.length < targetCount && guard < 80) {
-        guard++
-        if (!trySpawnUnusedImage(ww, wh, used, 0, next, true)) break
-      }
-
+      const maxSpawn = ww < 768 ? REFILL_SPAWN_MAX_TOPUP_NARROW : targetCount
+      spawnRefillImages(ww, wh, next, used, targetCount, maxSpawn, true)
       return next
     })
   }, [])
@@ -1005,17 +1243,17 @@ export default function FloatingImages() {
               const edgeCurve = Math.pow(edgeFactor, 1.05)
               // Left-side images yaw right; right-side images yaw left (toward center).
               const centerTiltY = -Math.sign(centerNorm) * edgeCurve * 30
-              const centerTiltZMultiplier = 0.85 + edgeCurve * 0.7
+              const centerTiltZMultiplier = 0.88 + edgeCurve * 0.82
               const vhForLift =
                 windowHeight > 0
                   ? windowHeight
                   : typeof window !== 'undefined'
                     ? window.innerHeight
                     : 1
-              const lift = Math.max(1, vhForLift) + image.height * LIFT_MULTIPLIER
+              const lift = getFloatLift(vhForLift, image.height, image.width, image.roll)
               const p0 = image.progress0
-              const baseDuration = 48 + (1 - d) * 58
-              const duration = Math.max(14, baseDuration * (1 - p0))
+              const baseDuration = UPWARD_DRIFT_DURATION_BASE + (1 - d) * UPWARD_DRIFT_DURATION_DEPTH_SPAN
+              const duration = Math.max(UPWARD_DRIFT_DURATION_MIN, baseDuration * (1 - p0))
               const shadowY = 10 + d * 36
               const shadowBlur = 18 + d * 52
               const shadowAlpha = narrowViewport ? 0.08 + d * 0.22 : 0.12 + d * 0.32

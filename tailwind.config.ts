@@ -21,7 +21,7 @@ export default {
   },
   plugins: [],
   safelist: [
-    // Used only via `SOCIAL_PANEL_SHELL_CLASS` in `src/lib/social-panel.ts` — keep if JIT ever misses it
+    // Used only via `getSocialPanelShellClass` in `src/lib/social-panel.ts` — keep if JIT ever misses it
     'h-[22rem]',
   ],
 } satisfies Config;

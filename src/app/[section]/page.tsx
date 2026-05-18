@@ -13,8 +13,8 @@ const oswald = Oswald({
 
 const headlineLines = (
   <>
-    <span className="block sm:inline">{"There's more where "}</span>
-    <span className="block sm:inline">{"that came from."}</span>
+    <span className="block md:inline">{"There's more where "}</span>
+    <span className="block md:inline">{"that came from."}</span>
   </>
 )
 
@@ -30,11 +30,11 @@ export default async function SectionPage({ params }: SectionPageProps) {
   if (!normalizedSection) notFound()
 
   return (
-    <div className="relative grid h-full min-h-0 w-full max-w-full grid-rows-[auto_minmax(0,1fr)_auto] items-center justify-items-center gap-4 overflow-x-visible overflow-y-hidden pb-6 max-md:max-h-[100dvh] max-md:overscroll-none sm:min-h-screen sm:max-h-none sm:grid-rows-[20px_minmax(0,1fr)_20px] sm:gap-12 sm:overflow-x-visible sm:overflow-y-visible sm:p-20 sm:pb-24">
+    <div className="relative grid h-full min-h-0 w-full max-w-full grid-rows-[auto_minmax(0,1fr)_auto] items-center justify-items-center gap-4 overflow-x-visible overflow-y-hidden pb-6 max-md:max-h-[100dvh] max-md:overscroll-none md:min-h-screen md:max-h-none md:grid-rows-[20px_minmax(0,1fr)_20px] md:gap-12 md:overflow-x-visible md:overflow-y-visible md:p-20 md:pb-24">
       <BackgroundRoot />
 
-      <main className="row-start-2 z-10 flex min-h-0 w-full max-w-md flex-col justify-self-center px-4 pt-6 max-sm:pt-10 sm:px-0 sm:pt-4">
-        <div className="flex flex-col gap-8 rounded-2xl border border-neutral-200/80 bg-white/88 p-4 shadow-[0_16px_48px_-16px_rgba(0,0,0,0.2)] ring-1 ring-black/[0.05] backdrop-blur-xl sm:gap-8 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:ring-0 sm:backdrop-blur-none">
+      <main className="row-start-2 z-10 flex min-h-0 w-full max-w-md flex-col justify-self-center px-4 pt-6 max-sm:pt-10 sm:px-6 md:px-0 md:pt-4">
+        <div className="flex flex-col gap-3 md:gap-8">
           <SectionPicker
             headlineFontClassName={oswald.className}
             headlineLines={headlineLines}

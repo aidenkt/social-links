@@ -67,7 +67,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased max-md:h-full max-md:min-h-0 max-md:overflow-hidden max-md:overscroll-none`}
       >
-        <div className="max-md:h-full max-md:min-h-0 max-md:max-h-[100dvh] max-md:overflow-hidden max-md:overscroll-none sm:contents">
+        <div className="max-md:h-full max-md:min-h-0 max-md:max-h-[100dvh] max-md:overflow-hidden max-md:overscroll-none md:contents">
           {children}
           <Analytics />
         </div>

@@ -26,6 +26,9 @@ const imageUrls = [
 
 const MAX_IMAGES = 24
 const INITIAL_ON_SCREEN = Math.min(12, imageUrls.length)
+/** Guaranteed visible floaters at first paint (user asked for more than 5). */
+const MIN_VISIBLE_AT_LOAD = 6
+const INITIAL_LOAD_PROGRESS = { minP: 0.36, maxP: 0.76 }
 const LIFT_MULTIPLIER = 3.6
 const SPAWN_COLLISION_PADDING = 10
 /** Desktop refill interval; mobile uses a shorter tick in the spawn effect. */
@@ -74,17 +77,17 @@ function pickRollDirection(
   const centerNorm = Math.max(-1, Math.min(1, centerNormRaw))
   const sideStrength = Math.abs(centerNorm)
 
-  // Left side should prefer negative rotation, right side positive rotation.
-  // Keep some randomness near center so it never looks too deterministic.
-  const sideClockwiseBase = centerNorm >= 0 ? 0.5 + sideStrength * 0.38 : 0.5 - sideStrength * 0.38
+  // Left: negative roll; right: positive. Stronger toward edges, looser near center.
+  const sideSign =
+    centerNorm === 0 ? (Math.random() < 0.5 ? 1 : -1) : Math.sign(centerNorm)
+  const sideClockwiseBase = 0.5 + sideSign * Math.pow(sideStrength, 0.88) * 0.48
 
   const clockwiseCount = existingImages.filter((img) => img.roll > 0).length
   const counterClockwiseCount = existingImages.length - clockwiseCount
   const total = clockwiseCount + counterClockwiseCount
-  const balanceClockwise = total > 0 ? 0.5 + (counterClockwiseCount - clockwiseCount) / (total * 2.6) : 0.5
+  const balanceClockwise = total > 0 ? 0.5 + (counterClockwiseCount - clockwiseCount) / (total * 3.2) : 0.5
 
-  // Find the nearest "above" image in the same vertical band and prefer alternating direction.
-  // This gives a braided look instead of long runs of same-direction rolls.
+  // Prefer alternating with the image above in the same band (mild — side bias wins at edges).
   const centerX = x + width / 2
   const bandHalfWidth = Math.max(80, width * 0.75)
   let nearestAbove: FloatingImage | null = null
@@ -106,15 +109,22 @@ function pickRollDirection(
     nearestAbove == null
       ? 0.5
       : nearestAbove.roll > 0
-        ? 0.1
-        : 0.9
+        ? 0.28
+        : 0.72
 
-  // Blend side-bias, vertical alternation, and global balancing.
+  // Edge spawns: mostly side-correct. Center spawns: more alternation / balance.
+  const sideWeight = 0.34 + sideStrength * 0.58
+  const alternateWeight = (1 - sideStrength) * 0.26
+  const balanceWeight = (1 - sideStrength) * 0.1
+  const blendTotal = sideWeight + alternateWeight + balanceWeight
   const clockwiseProbability = Math.max(
-    0.14,
+    0.05,
     Math.min(
-      0.86,
-      sideClockwiseBase * 0.56 + alternateClockwise * 0.32 + balanceClockwise * 0.12
+      0.95,
+      (sideClockwiseBase * sideWeight +
+        alternateClockwise * alternateWeight +
+        balanceClockwise * balanceWeight) /
+        blendTotal
     )
   )
   return Math.random() < clockwiseProbability ? 1 : -1
@@ -188,6 +198,35 @@ function getSpawnTopY(wh: number, height: number, progress0: number): number {
   const baseY = getSpawnBaseY(wh, height)
   const lift = wh + height * LIFT_MULTIPLIER
   return baseY - lift * progress0
+}
+
+function getFloatingImageTopY(img: FloatingImage, wh: number): number {
+  const lift = wh + img.height * LIFT_MULTIPLIER
+  return img.y - lift * img.progress0
+}
+
+function isVisibleAtLoad(img: FloatingImage, wh: number): boolean {
+  const top = getFloatingImageTopY(img, wh)
+  const aabb = getRotatedAabbSize(img.width, img.height, img.roll)
+  const bottom = top + aabb.height
+  return bottom > wh * 0.04 && top < wh * 0.94
+}
+
+function countVisibleAtLoad(images: FloatingImage[], wh: number): number {
+  return images.filter((img) => isVisibleAtLoad(img, wh)).length
+}
+
+function ensureMinimumVisibleAtLoad(images: FloatingImage[], wh: number): void {
+  let visible = countVisibleAtLoad(images, wh)
+  if (visible >= MIN_VISIBLE_AT_LOAD) return
+
+  const sorted = [...images].sort((a, b) => a.progress0 - b.progress0)
+  for (const img of sorted) {
+    if (visible >= MIN_VISIBLE_AT_LOAD) break
+    if (isVisibleAtLoad(img, wh)) continue
+    img.progress0 = Math.min(INITIAL_LOAD_PROGRESS.maxP, img.progress0 + 0.18)
+    if (isVisibleAtLoad(img, wh)) visible++
+  }
 }
 
 function hasSpawnCollision(
@@ -309,9 +348,11 @@ function pickSpreadX(
   return bestX
 }
 
-function pickSpreadProgress(existingImages: FloatingImage[]): number {
-  const minP = 0.04
-  const maxP = 0.66
+function pickSpreadProgress(
+  existingImages: FloatingImage[],
+  range: { minP: number; maxP: number } = { minP: 0.04, maxP: 0.66 }
+): number {
+  const { minP, maxP } = range
   if (existingImages.length === 0) return minP + Math.random() * (maxP - minP)
 
   const laneCount = 6
@@ -437,14 +478,34 @@ function trySpawnUnusedImage(
 
 function buildInitialBatch(ww: number, wh: number): FloatingImage[] {
   const used = new Set<string>()
-  const initialCount = ww < 768 ? Math.min(10, INITIAL_ON_SCREEN) : INITIAL_ON_SCREEN
+  const targetCount = ww < 768 ? Math.min(10, INITIAL_ON_SCREEN) : INITIAL_ON_SCREEN
   const out: FloatingImage[] = []
   let guard = 0
-  while (out.length < initialCount && guard < 80) {
+  const maxGuard = 200
+
+  while (guard < maxGuard) {
+    const visible = countVisibleAtLoad(out, wh)
+    const needsMore =
+      out.length < targetCount || visible < MIN_VISIBLE_AT_LOAD
+    if (!needsMore) break
+
     guard++
-    const p0 = pickSpreadProgress(out)
-    if (!trySpawnUnusedImage(ww, wh, used, p0, out, true)) break
+    const p0 = pickSpreadProgress(out, INITIAL_LOAD_PROGRESS)
+    const spawned = trySpawnUnusedImage(ww, wh, used, p0, out, true)
+
+    if (spawned) continue
+
+    if (visible < MIN_VISIBLE_AT_LOAD) {
+      const fallbackP = INITIAL_LOAD_PROGRESS.minP + Math.random() * (INITIAL_LOAD_PROGRESS.maxP - INITIAL_LOAD_PROGRESS.minP)
+      if (trySpawnUnusedImage(ww, wh, used, fallbackP, out, false)) continue
+    }
+
+    if (visible >= MIN_VISIBLE_AT_LOAD && out.length >= MIN_VISIBLE_AT_LOAD) break
+    if (out.length >= targetCount && visible < MIN_VISIBLE_AT_LOAD) continue
+    break
   }
+
+  ensureMinimumVisibleAtLoad(out, wh)
   return out
 }
 
@@ -716,7 +777,10 @@ export default function FloatingImages() {
       if (isRevealReady) return
       if (!initialImageIdsRef.current.has(id)) return
       loadedInitialImageIdsRef.current.add(id)
-      const target = Math.min(4, Math.max(1, initialImageIdsRef.current.size))
+      const target = Math.min(
+        MIN_VISIBLE_AT_LOAD,
+        Math.max(1, initialImageIdsRef.current.size)
+      )
       if (loadedInitialImageIdsRef.current.size >= target) {
         markRevealReady()
       }

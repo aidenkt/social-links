@@ -6,12 +6,54 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
 import SocialAccount from './SocialAccount'
 import SectionPickerSkeleton from './SectionPickerSkeleton'
-import { SOCIAL_PANEL_SHELL_CLASS } from '../lib/social-panel'
+import GlassPanel from './GlassPanel'
+import {
+  DESKTOP_NAV_BRIDGE_CLASS,
+  DESKTOP_NAV_CAP_CLASS,
+  DESKTOP_NAV_CAP_SHELL_CLASS,
+  DESKTOP_NAV_CAP_STROKE_CLASS,
+  DESKTOP_NAV_CAP_WRAP_CLASS,
+  DESKTOP_NAV_TABS_CLASS,
+  GLASS_PANEL_MENU_OVERFLOW_CLASS,
+  GLASS_PANEL_BRAND_TINT_CLASS,
+  GLASS_PANEL_SHIM_CLASS,
+  SOCIAL_LIST_CLASS,
+  getDesktopNavTabClassName,
+  getSectionMenuItemClassName,
+  getSocialListInnerLayoutClass,
+  getSocialPanelShellClass,
+  SOCIAL_LIST_SLOT_CLASS,
+  SECTION_MENU_PANEL_CLASS,
+  SECTION_MENU_TRIGGER_CLASS,
+} from '../lib/social-panel'
 import {
   BACKGROUND_READY_ATTR,
   BACKGROUND_READY_EVENT,
 } from '../lib/background-ready'
 import { normalizeSectionParam, type SectionId } from '../lib/sections'
+
+const socialListSectionTransition = {
+  initial: { opacity: 0, y: 10, filter: 'blur(6px)' },
+  animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
+  exit: { opacity: 0, y: -8, filter: 'blur(5px)' },
+  transition: { duration: 0.24, ease: [0.22, 1, 0.36, 1] as const },
+}
+
+function SocialListSectionLayer({
+  sectionId,
+  children,
+}: {
+  sectionId: SectionId
+  children: ReactNode
+}) {
+  const [layoutClass] = useState(() => getSocialListInnerLayoutClass(sectionId))
+
+  return (
+    <motion.div {...socialListSectionTransition} className={layoutClass}>
+      {children}
+    </motion.div>
+  )
+}
 
 // Define the sections array with section IDs as 'id'
 const sections = [
@@ -27,7 +69,7 @@ const sections = [
 // Define the customComponents object with SectionId keys
 const customComponents: Record<SectionId, () => JSX.Element> = {
   main: () => (
-	<div className="grid grid-cols-1 gap-2">
+	<div className={SOCIAL_LIST_CLASS}>
 	  <SocialAccount
 		src="/platform/instagram.webp"
 		name="@aidentabrizi"
@@ -56,7 +98,7 @@ const customComponents: Record<SectionId, () => JSX.Element> = {
 	</div>
   ),
   text: () => (
-	<div className="grid grid-cols-1 gap-2">
+	<div className={SOCIAL_LIST_CLASS}>
 	  <SocialAccount
 		src="/platform/bluesky.webp"
 		name="@aiden.social"
@@ -84,7 +126,7 @@ const customComponents: Record<SectionId, () => JSX.Element> = {
 	</div>
   ),
   photos: () => (
-	<div className="grid grid-cols-1 gap-2">
+	<div className={SOCIAL_LIST_CLASS}>
 	  <SocialAccount
 		src="/platform/instagram.webp"
 		name="@aidentabrizi"
@@ -96,7 +138,7 @@ const customComponents: Record<SectionId, () => JSX.Element> = {
 	</div>
   ),
   videos: () => (
-	<div className="grid grid-cols-1 gap-2">
+	<div className={SOCIAL_LIST_CLASS}>
 	  <SocialAccount
 		src="/platform/youtube.webp"
 		name="@aidenkt"
@@ -116,7 +158,7 @@ const customComponents: Record<SectionId, () => JSX.Element> = {
 	</div>
   ),
   playlists: () => (
-	<div className="grid grid-cols-1 gap-2">
+	<div className={SOCIAL_LIST_CLASS}>
 	  <SocialAccount
 		src="/platform/applemusic.webp"
 		name="@aidenkt"
@@ -144,7 +186,7 @@ const customComponents: Record<SectionId, () => JSX.Element> = {
 	</div>
   ),
   work: () => (
-	<div className="grid grid-cols-1 gap-2">
+	<div className={SOCIAL_LIST_CLASS}>
 	  <SocialAccount
 		src="/platform/linkedin.webp"
 		name="Aiden Tabrizi"
@@ -173,7 +215,7 @@ const customComponents: Record<SectionId, () => JSX.Element> = {
 	</div>
   ),
   contact: () => (
-	<div className="grid grid-cols-1 gap-2">
+	<div className={SOCIAL_LIST_CLASS}>
 	  <SocialAccount
 		src="/platform/mail.webp"
 		name="hi@aidenkt.com"
@@ -211,7 +253,6 @@ export default function SectionPicker({
   const pathname = usePathname()
   const [activeSection, setActiveSection] = useState<SectionId>(initialSection)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
 
   // Read query params from the URL without `useSearchParams()` (that hook suspends and can
   // leave the route stuck on the Suspense fallback after client navigations back to `/`).
@@ -228,13 +269,6 @@ export default function SectionPicker({
       }
     }
   }, [showSectionControls, pathname])
-
-  useLayoutEffect(() => {
-    const checkIsMobile = () => setIsMobile(window.innerWidth < 768)
-    checkIsMobile()
-    window.addEventListener('resize', checkIsMobile)
-    return () => window.removeEventListener('resize', checkIsMobile)
-  }, [])
 
   const [bgReady, setBgReady] = useState(false)
 
@@ -273,6 +307,7 @@ export default function SectionPicker({
   }
 
   const activeLabel = sections.find((section) => section.id === activeSection)?.label
+  const socialPanelShellClass = getSocialPanelShellClass(activeSection)
 
   const renderContent = () => {
 	const CustomComponent = customComponents[activeSection]
@@ -284,7 +319,7 @@ export default function SectionPicker({
 
   const headlineEl = (
 	<p
-	  className={`${headlineFontClassName} w-full text-center text-2xl font-semibold text-neutral-900 sm:text-[1.3rem]`}
+	  className={`${headlineFontClassName} w-full text-center text-2xl font-semibold text-neutral-900 md:text-[1.3rem]`}
 	>
 	  {headlineLines}
 	</p>
@@ -297,67 +332,65 @@ export default function SectionPicker({
 
   if (!showSectionControls) {
 	return (
-	  <div className="flex w-full min-w-0 shrink-0 flex-col gap-3 px-0 py-1 sm:gap-4">
-		<div className="relative isolate w-full overflow-hidden rounded-2xl border border-white/55 bg-white/30 p-3 shadow-[0_18px_50px_-24px_rgba(0,0,0,0.28)] ring-1 ring-black/[0.04] backdrop-blur-xl [backdrop-filter:saturate(130%)_blur(20px)]">
-		  <div
-			aria-hidden
-			className="pointer-events-none absolute inset-0 bg-[linear-gradient(140deg,rgba(255,255,255,0.26)_0%,rgba(255,255,255,0.12)_44%,rgba(255,255,255,0.08)_100%),radial-gradient(130%_65%_at_14%_-12%,rgba(255,120,185,0.12)_0%,rgba(255,120,185,0)_46%),radial-gradient(140%_80%_at_88%_0%,rgba(90,170,255,0.12)_0%,rgba(90,170,255,0)_48%),radial-gradient(160%_95%_at_58%_102%,rgba(255,210,120,0.10)_0%,rgba(255,210,120,0)_52%)]"
-		  />
-		  <div className="relative z-10 px-2 py-1 sm:py-2">{headlineEl}</div>
-		  <div className="relative z-10 mt-2 max-sm:mt-3">
+	  <div className="flex w-full min-w-0 shrink-0 flex-col gap-3 px-0 py-1 md:gap-3">
+		<GlassPanel className="p-3 md:p-2 md:px-3">
+		  <div className="px-2 py-1 md:py-1.5">{headlineEl}</div>
+		  <div className={SOCIAL_LIST_SLOT_CLASS}>
 			<AnimatePresence mode="wait" initial={false}>
-			  <motion.div
-				key={activeSection}
-				initial={{ opacity: 0, y: 10, filter: 'blur(6px)' }}
-				animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-				exit={{ opacity: 0, y: -8, filter: 'blur(5px)' }}
-				transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-				className="h-full w-full"
-			  >
+			  <SocialListSectionLayer key={activeSection} sectionId={activeSection}>
 				{renderContent()}
-			  </motion.div>
+			  </SocialListSectionLayer>
 			</AnimatePresence>
 		  </div>
-		</div>
+		</GlassPanel>
 	  </div>
 	)
   }
 
   return (
-	<div className="flex w-full min-w-0 shrink-0 flex-col gap-3 px-0 py-1 sm:gap-4">
-	  {showSectionControls ? (isMobile ? (
-		<motion.div
-		  initial={{ opacity: 0, y: 10, scale: 0.985 }}
-		  animate={{ opacity: 1, y: 0, scale: 1 }}
-		  transition={mobileIntroTransition}
-		  className="relative z-10 mb-3 flex min-h-[9.5rem] flex-col sm:mb-4"
+	<div className="flex w-full min-w-0 shrink-0 flex-col gap-3 px-0 py-1 md:gap-3">
+	  {showSectionControls ? (
+	    <>
+	      <GlassPanel
+		  className={`${GLASS_PANEL_MENU_OVERFLOW_CLASS} gap-3 p-3 md:hidden`}
+		  contentClassName="flex min-h-0 flex-col gap-3 overflow-visible"
 		>
-		  <div className="min-h-0 flex-1" aria-hidden />
-		  <div className="shrink-0 px-2">{headlineEl}</div>
-		  <div className="min-h-0 flex-1" aria-hidden />
+		  <motion.div
+		    initial={{ opacity: 0, y: 10, scale: 0.985 }}
+		    animate={{ opacity: 1, y: 0, scale: 1 }}
+		    transition={mobileIntroTransition}
+		    className="flex flex-col gap-3 overflow-visible"
+		  >
+		  <div className="px-1 text-center">{headlineEl}</div>
+		  <div className={`relative overflow-visible ${isDropdownOpen ? 'z-30' : 'z-10'}`}>
 		  <button
 			type="button"
 			onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-			className="flex w-full min-h-[3rem] items-center justify-between gap-3 rounded-xl border-2 border-neutral-200 bg-white px-4 py-3 text-left shadow-md transition-[transform,box-shadow,background-color,border-color] active:scale-[0.99] active:bg-neutral-50 active:shadow-sm hover:border-neutral-300 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/35 focus-visible:ring-offset-2 [-webkit-tap-highlight-color:transparent]"
+			className={SECTION_MENU_TRIGGER_CLASS}
 			aria-expanded={isDropdownOpen}
 			aria-haspopup="menu"
 			aria-controls={isDropdownOpen ? SECTION_MENU_ID : undefined}
 			aria-label={`Change link category (now ${activeLabel ?? 'section'})`}
 		  >
-			<span className="text-base font-semibold text-neutral-900">{activeLabel}</span>
-			<ChevronDown className={`h-6 w-6 shrink-0 text-neutral-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} strokeWidth={2.25} />
+			<span className="min-w-0 text-base font-semibold text-neutral-900">{activeLabel}</span>
+			<span className="section-menu-trigger-chevron" aria-hidden>
+			  <ChevronDown
+				className={`h-5 w-5 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}
+				strokeWidth={2.5}
+			  />
+			</span>
 		  </button>
 		  <AnimatePresence>
 			{isDropdownOpen && (
 			  <motion.div
-				initial={{ opacity: 0, y: -10 }}
-				animate={{ opacity: 1, y: 0 }}
-				exit={{ opacity: 0, y: -10 }}
-				transition={{ duration: 0.2 }}
+				initial={{ opacity: 0, y: -8, scale: 0.98 }}
+				animate={{ opacity: 1, y: 0, scale: 1 }}
+				exit={{ opacity: 0, y: -6, scale: 0.98 }}
+				transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
 				id={SECTION_MENU_ID}
 				role="menu"
 				aria-label="Link categories"
-				className="absolute z-10 mt-2 w-full overflow-hidden rounded-xl border-2 border-neutral-200 bg-white py-1.5 shadow-lg"
+				className={SECTION_MENU_PANEL_CLASS}
 			  >
 				{sections.map((section) => (
 				  <button
@@ -365,9 +398,7 @@ export default function SectionPicker({
 					key={section.id}
 					role="menuitem"
 					onClick={() => handleSectionChange(section.id as SectionId)}
-					className={`flex min-h-[2.75rem] w-full items-center px-4 py-3 text-left text-base transition-colors duration-150 active:bg-neutral-200/80 hover:bg-neutral-100 focus:outline-none focus-visible:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foreground/20 ${
-					  activeSection === section.id ? 'bg-neutral-100 font-semibold text-black' : 'font-medium text-neutral-800'
-					}`}
+					className={getSectionMenuItemClassName(activeSection === section.id)}
 				  >
 					{section.label}
 				  </button>
@@ -375,22 +406,33 @@ export default function SectionPicker({
 			  </motion.div>
 			)}
 		  </AnimatePresence>
+		  </div>
 		</motion.div>
-	  ) : (
-		<div className="relative left-1/2 mb-3 hidden w-[100dvw] max-w-[100dvw] -translate-x-1/2 px-4 sm:mb-4 sm:block">
+		<div className={`${SOCIAL_LIST_SLOT_CLASS} z-0`}>
+		  <AnimatePresence mode="wait" initial={false}>
+		    <SocialListSectionLayer key={activeSection} sectionId={activeSection}>
+		      {renderContent()}
+		    </SocialListSectionLayer>
+		  </AnimatePresence>
+		</div>
+	      </GlassPanel>
+	      <div className="relative left-1/2 mb-3 hidden w-[100dvw] max-w-[100dvw] -translate-x-1/2 px-4 md:mb-3 md:block">
 		  <div className="relative mx-auto flex w-fit max-w-full flex-col items-center px-6 pt-3 pb-3 text-center">
-		    <div className="pointer-events-none absolute inset-x-0 top-2 h-20" aria-hidden>
-		      <div className="absolute left-1/2 top-0 h-20 w-[62%] -translate-x-1/2 rounded-[2rem] border-x border-t border-b-0 border-black/[0.05] bg-[#f7f7f7] shadow-[0_10px_24px_-18px_rgba(0,0,0,0.35)]" />
+		    <div className={`pointer-events-none absolute inset-x-0 top-2 ${DESKTOP_NAV_CAP_WRAP_CLASS}`} aria-hidden>
+		      <div className={DESKTOP_NAV_CAP_SHELL_CLASS}>
+		        <div className={DESKTOP_NAV_CAP_CLASS} />
+		      </div>
+		      <div className={DESKTOP_NAV_CAP_STROKE_CLASS} />
 		    </div>
 		    <div className="relative z-10 px-10 pt-1 pb-2">{headlineEl}</div>
 		    <div className="relative mx-auto w-max max-w-full">
 		      <div
-		        className="pointer-events-none absolute left-1/2 z-[11] h-[7px] w-[66.9%] -translate-x-1/2 rounded-none bg-[#f7f7f7]"
+		        className={`pointer-events-none absolute left-1/2 z-[11] h-[7px] -translate-x-1/2 rounded-none ${DESKTOP_NAV_BRIDGE_CLASS}`}
 		        style={{ top: '-5px' }}
 		        aria-hidden
 		      />
 		      <div
-		        className="pointer-events-auto relative z-10 inline-flex w-max max-w-full flex-nowrap gap-0.5 overflow-x-auto rounded-full border border-black/[0.06] bg-[#f7f7f7] px-1 py-1 shadow-[0_12px_28px_-18px_rgba(0,0,0,0.45)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+		        className={`pointer-events-auto relative z-10 ${DESKTOP_NAV_TABS_CLASS}`}
 		        role="tablist"
 		      >
 			{sections.map((section) => (
@@ -398,11 +440,7 @@ export default function SectionPicker({
 				type="button"
 				key={section.id}
 				onClick={() => setActiveSection(section.id as SectionId)}
-				className={`shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-xs font-medium transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/35 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-50 sm:px-4 sm:text-sm ${
-				  activeSection === section.id
-					? 'border border-neutral-200/80 bg-white text-black shadow-sm'
-					: 'text-neutral-600 hover:text-black'
-				}`}
+				className={getDesktopNavTabClassName(activeSection === section.id, true)}
 				aria-pressed={activeSection === section.id}
 			  >
 				{section.label}
@@ -412,38 +450,23 @@ export default function SectionPicker({
 		    </div>
 		  </div>
 		</div>
-	  )) : (
-		<div className="mb-3 px-2 py-1 sm:mb-4 sm:py-2">
+	    </>
+	  ) : (
+		<div className="mb-3 px-2 py-1 md:mb-4 md:py-2">
 		  {headlineEl}
 		</div>
 	  )}
-	  {isMobile ? (
-		<motion.div
-		  initial={{ opacity: 0, y: 12, scale: 0.985 }}
-		  animate={{ opacity: 1, y: 0, scale: 1 }}
-		  transition={{ ...mobileIntroTransition, delay: 0.08 }}
-		  className={SOCIAL_PANEL_SHELL_CLASS}
-		>
-		  <div key={activeSection} className="h-full w-full">
-			{renderContent()}
-		  </div>
-		</motion.div>
-	  ) : (
-		<div className={SOCIAL_PANEL_SHELL_CLASS}>
-		  <AnimatePresence mode="wait" initial={false}>
-			<motion.div
-			  key={activeSection}
-			  initial={{ opacity: 0, y: 10, filter: 'blur(6px)' }}
-			  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-			  exit={{ opacity: 0, y: -8, filter: 'blur(5px)' }}
-			  transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-			  className="h-full w-full"
-			>
-			  {renderContent()}
-			</motion.div>
-		  </AnimatePresence>
+	  <div className={`${socialPanelShellClass} hidden md:flex`}>
+		  <div aria-hidden className={GLASS_PANEL_SHIM_CLASS} />
+		  <div aria-hidden className={GLASS_PANEL_BRAND_TINT_CLASS} />
+		  <div className={SOCIAL_LIST_SLOT_CLASS}>
+		    <AnimatePresence mode="wait" initial={false}>
+		      <SocialListSectionLayer key={activeSection} sectionId={activeSection}>
+		        {renderContent()}
+		      </SocialListSectionLayer>
+		    </AnimatePresence>
 		</div>
-	  )}
+	  </div>
 	</div>
   )
 }

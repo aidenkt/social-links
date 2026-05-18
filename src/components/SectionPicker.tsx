@@ -183,10 +183,10 @@ const customComponents: Record<SectionId, () => JSX.Element> = {
 	  />
 	  <SocialAccount
 		src="/platform/discord.webp"
-		name="discord.gg/YKKAqrs"
+		name="discord.gg/akt"
 		platform="Discord"
 		cta="Join"
-		link="https://discord.gg/YKKAqrs"
+		link="https://discord.gg/akt"
 		buttonColor="#5865F2"
 	  />
 	</div>
@@ -229,7 +229,7 @@ export default function SectionPicker({
     }
   }, [showSectionControls, pathname])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const checkIsMobile = () => setIsMobile(window.innerWidth < 768)
     checkIsMobile()
     window.addEventListener('resize', checkIsMobile)
@@ -260,6 +260,9 @@ export default function SectionPicker({
       <SectionPickerSkeleton
         headlineFontClassName={headlineFontClassName}
         headlineLines={headlineLines}
+        showSectionControls={showSectionControls}
+        activeSectionId={initialSection}
+        sectionSummaries={sections.map(({ id, label }) => ({ id, label }))}
       />
     )
   }

@@ -154,21 +154,21 @@ const customComponents: Record<SectionId, () => JSX.Element> = {
 		buttonColor="#0A66C2"
 	  />
 	  <SocialAccount
-		src="/platform/handshake.webp"
-		name="aidenkt"
-		platform="Handshake"
-		cta="Connect"
-		link="https://app.joinhandshake.com/profiles/aidenkt"
-		buttonColor="#D3FC53"
-		textColor="black"
-	  />
-	  <SocialAccount
 		src="/platform/github.webp"
 		name="aidenkt"
 		platform="GitHub"
 		cta="Follow"
 		link="https://github.com/AidenKT"
 		buttonColor="#000000"
+	  />
+	  <SocialAccount
+		src="/platform/handshake.webp"
+		name="Aiden Tabrizi"
+		platform="Handshake"
+		cta="Connect"
+		link="https://app.joinhandshake.com/profiles/aidenkt"
+		buttonColor="#D3FC53"
+		textColor="black"
 	  />
 	</div>
   ),

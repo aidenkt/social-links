@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useLayoutEffect, type ReactNode } from 'react'
+import { useState, useEffect, useLayoutEffect, useCallback, useRef, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
@@ -25,6 +25,7 @@ import {
   getSocialPanelShellClass,
   SOCIAL_LIST_SLOT_CLASS,
   SECTION_MENU_PANEL_CLASS,
+  SECTION_MENU_MIN_SCROLL_HEIGHT_PX,
   SECTION_MENU_TRIGGER_CLASS,
 } from '../lib/social-panel'
 import {
@@ -254,6 +255,44 @@ export default function SectionPicker({
   const pathname = usePathname()
   const [activeSection, setActiveSection] = useState<SectionId>(initialSection)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const menuTriggerRef = useRef<HTMLButtonElement>(null)
+  const [menuMaxHeightPx, setMenuMaxHeightPx] = useState<number | null>(null)
+
+  const updateMenuMaxHeight = useCallback(() => {
+    const trigger = menuTriggerRef.current
+    if (!trigger) return
+
+    const vv = window.visualViewport
+    const viewportHeight = vv?.height ?? window.innerHeight
+    const viewportTop = vv?.offsetTop ?? 0
+    const triggerRect = trigger.getBoundingClientRect()
+    const gapBelowTrigger = 10
+    const bottomInset = 12
+    const available =
+      viewportTop + viewportHeight - triggerRect.bottom - gapBelowTrigger - bottomInset
+
+    setMenuMaxHeightPx(Math.max(SECTION_MENU_MIN_SCROLL_HEIGHT_PX, Math.floor(available)))
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!isDropdownOpen) {
+      setMenuMaxHeightPx(null)
+      return
+    }
+
+    updateMenuMaxHeight()
+    const vv = window.visualViewport
+    const onViewportChange = () => updateMenuMaxHeight()
+    vv?.addEventListener('resize', onViewportChange)
+    vv?.addEventListener('scroll', onViewportChange)
+    window.addEventListener('resize', onViewportChange)
+
+    return () => {
+      vv?.removeEventListener('resize', onViewportChange)
+      vv?.removeEventListener('scroll', onViewportChange)
+      window.removeEventListener('resize', onViewportChange)
+    }
+  }, [isDropdownOpen, updateMenuMaxHeight])
 
   // Read query params from the URL without `useSearchParams()` (that hook suspends and can
   // leave the route stuck on the Suspense fallback after client navigations back to `/`).
@@ -365,6 +404,7 @@ export default function SectionPicker({
 		  <div className="px-1 text-center">{headlineEl}</div>
 		  <div className={`relative overflow-visible ${isDropdownOpen ? 'z-30' : 'z-10'}`}>
 		  <button
+			ref={menuTriggerRef}
 			type="button"
 			onClick={() => setIsDropdownOpen(!isDropdownOpen)}
 			className={SECTION_MENU_TRIGGER_CLASS}
@@ -392,6 +432,9 @@ export default function SectionPicker({
 				role="menu"
 				aria-label="Link categories"
 				className={SECTION_MENU_PANEL_CLASS}
+				style={
+				  menuMaxHeightPx != null ? { maxHeight: menuMaxHeightPx } : undefined
+				}
 			  >
 				{sections.map((section) => (
 				  <button

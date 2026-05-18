@@ -42,6 +42,9 @@ export const SECTION_MENU_TRIGGER_CLASS = 'section-menu-trigger'
 
 export const SECTION_MENU_PANEL_CLASS = 'section-menu-panel'
 
+/** Minimum scrollable dropdown height when the visual viewport is very short (in-app browsers). */
+export const SECTION_MENU_MIN_SCROLL_HEIGHT_PX = 140
+
 export function getSectionMenuItemClassName(active: boolean): string {
   return `section-menu-item${active ? ' section-menu-item-active' : ''}`
 }

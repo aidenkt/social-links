@@ -1,5 +1,5 @@
 export type SectionId =
-  | 'primary'
+  | 'main'
   | 'text'
   | 'photos'
   | 'videos'
@@ -8,7 +8,7 @@ export type SectionId =
   | 'contact'
 
 const SECTION_ALIASES: Record<string, SectionId> = {
-  primary: 'primary',
+  main: 'main',
   text: 'text',
   photos: 'photos',
   videos: 'videos',

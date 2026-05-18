@@ -15,18 +15,18 @@ import { normalizeSectionParam, type SectionId } from '../lib/sections'
 
 // Define the sections array with section IDs as 'id'
 const sections = [
-  { id: 'primary', label: 'Primary', content: 'Primary content goes here' },
-  { id: 'text', label: 'Text', content: 'Text content goes here' },
-  { id: 'photos', label: 'Photos', content: 'Photo gallery goes here' },
-  { id: 'videos', label: 'Videos', content: 'Video player goes here' },
-  { id: 'playlists', label: 'Playlists', content: 'Playlist player goes here' },
-  { id: 'work', label: 'Work', content: 'Work portfolio goes here' },
-  { id: 'contact', label: 'Contact', content: 'Contact form goes here' },
+  { id: 'main', label: 'Main', content: 'Main socials go here' },
+  { id: 'text', label: 'Text', content: 'Text-based platforms go here' },
+  { id: 'photos', label: 'Photos', content: 'Photo sharing goes here' },
+  { id: 'videos', label: 'Videos', content: 'Video platforms go here' },
+  { id: 'playlists', label: 'Playlists', content: 'Music accounts go here' },
+  { id: 'work', label: 'Work', content: 'Work profiles go here' },
+  { id: 'contact', label: 'Contact', content: 'Contact links go here' },
 ]
 
 // Define the customComponents object with SectionId keys
 const customComponents: Record<SectionId, () => JSX.Element> = {
-  primary: () => (
+  main: () => (
 	<div className="grid grid-cols-1 gap-2">
 	  <SocialAccount
 		src="/platform/instagram.webp"
@@ -205,7 +205,7 @@ type SectionPickerProps = {
 export default function SectionPicker({
   headlineFontClassName,
   headlineLines,
-  initialSection = 'primary',
+  initialSection = 'main',
   showSectionControls = true,
 }: SectionPickerProps) {
   const pathname = usePathname()

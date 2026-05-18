@@ -15,6 +15,7 @@ import {
   DESKTOP_NAV_CAP_WRAP_CLASS,
   DESKTOP_NAV_TABS_CLASS,
   GLASS_PANEL_MENU_OVERFLOW_CLASS,
+  GLASS_PANEL_PADDING_CLASS,
   GLASS_PANEL_BRAND_TINT_CLASS,
   GLASS_PANEL_SHIM_CLASS,
   SOCIAL_LIST_CLASS,
@@ -333,7 +334,7 @@ export default function SectionPicker({
   if (!showSectionControls) {
 	return (
 	  <div className="flex w-full min-w-0 shrink-0 flex-col gap-3 px-0 py-1 md:gap-3">
-		<GlassPanel className="p-3 md:p-2 md:px-3">
+		<GlassPanel className={GLASS_PANEL_PADDING_CLASS}>
 		  <div className="px-2 py-1 md:py-1.5">{headlineEl}</div>
 		  <div className={SOCIAL_LIST_SLOT_CLASS}>
 			<AnimatePresence mode="wait" initial={false}>
@@ -352,7 +353,7 @@ export default function SectionPicker({
 	  {showSectionControls ? (
 	    <>
 	      <GlassPanel
-		  className={`${GLASS_PANEL_MENU_OVERFLOW_CLASS} gap-3 p-3 md:hidden`}
+		  className={`${GLASS_PANEL_MENU_OVERFLOW_CLASS} gap-3 ${GLASS_PANEL_PADDING_CLASS} md:hidden`}
 		  contentClassName="flex min-h-0 flex-col gap-3 overflow-visible"
 		>
 		  <motion.div

@@ -14,6 +14,9 @@ export const SECTION_SOCIAL_COUNTS: Record<SectionId, number> = {
 /** Glass panel shell + tint shim (defined in `globals.css` — keep both in sync). */
 export const GLASS_PANEL_CLASS = 'glass-panel'
 
+/** Equal inset on all sides for glass shells (keep in sync across pickers). */
+export const GLASS_PANEL_PADDING_CLASS = 'p-3'
+
 export const GLASS_PANEL_SHIM_CLASS = 'glass-panel-shim'
 
 export const GLASS_PANEL_BRAND_TINT_CLASS = 'glass-panel-brand-tint'
@@ -77,7 +80,7 @@ export function getSocialListInnerLayoutClass(sectionId: SectionId): string {
 
 /** Desktop home-page social list glass shell. */
 export function getSocialPanelShellClass(_sectionId?: SectionId): string {
-  return `${GLASS_PANEL_CLASS} p-2 md:px-3`
+  return `${GLASS_PANEL_CLASS} ${GLASS_PANEL_PADDING_CLASS}`
 }
 
 export const SOCIAL_LIST_CLASS = 'grid grid-cols-1 gap-2'

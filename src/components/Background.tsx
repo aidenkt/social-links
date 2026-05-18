@@ -28,7 +28,8 @@ const MAX_IMAGES = 24
 const INITIAL_ON_SCREEN = Math.min(12, imageUrls.length)
 /** Guaranteed visible floaters at first paint (user asked for more than 5). */
 const MIN_VISIBLE_AT_LOAD = 6
-const INITIAL_LOAD_PROGRESS = { minP: 0.36, maxP: 0.76 }
+/** Viewport-height bands for initial spread (not progress lanes). */
+const INITIAL_VIEWPORT_BANDS = 5
 const LIFT_MULTIPLIER = 3.6
 const SPAWN_COLLISION_PADDING = 10
 /** Desktop refill interval; mobile uses a shorter tick in the spawn effect. */
@@ -216,16 +217,165 @@ function countVisibleAtLoad(images: FloatingImage[], wh: number): number {
   return images.filter((img) => isVisibleAtLoad(img, wh)).length
 }
 
-function ensureMinimumVisibleAtLoad(images: FloatingImage[], wh: number): void {
-  let visible = countVisibleAtLoad(images, wh)
-  if (visible >= MIN_VISIBLE_AT_LOAD) return
+function getTypicalDisplayHeight(ww: number): number {
+  const { min, max } = getDisplayWidthBounds(ww)
+  const width = Math.round((min + max) * 0.5)
+  return Math.round(width * 0.72)
+}
 
-  const sorted = [...images].sort((a, b) => a.progress0 - b.progress0)
-  for (const img of sorted) {
+function getVisibleProgressRange(
+  wh: number,
+  height: number
+): { minP: number; maxP: number } {
+  const baseY = getSpawnBaseY(wh, height)
+  const lift = wh + height * LIFT_MULTIPLIER
+  const minTop = wh * 0.04
+  const maxTop = wh * 0.92
+  const maxP = (baseY - minTop) / lift
+  const minP = (baseY - maxTop) / lift
+  return {
+    minP: Math.max(0.04, Math.min(minP, maxP)),
+    maxP: Math.min(0.94, Math.max(minP, maxP)),
+  }
+}
+
+function progressForViewportCenterY(wh: number, height: number, targetCenterY: number): number {
+  const baseY = getSpawnBaseY(wh, height)
+  const lift = wh + height * LIFT_MULTIPLIER
+  return (baseY + height * 0.5 - targetCenterY) / lift
+}
+
+function getViewportBandCenterY(wh: number, bandIndex: number, bandCount: number): number {
+  const margin = wh * 0.08
+  const usable = Math.max(1, wh - margin * 2)
+  return margin + usable * ((bandIndex + 0.5) / bandCount)
+}
+
+function getImageViewportCenterY(img: FloatingImage, wh: number): number {
+  const top = getFloatingImageTopY(img, wh)
+  const aabb = getRotatedAabbSize(img.width, img.height, img.roll)
+  return top + aabb.height / 2
+}
+
+function getViewportBandIndex(centerY: number, wh: number, bandCount: number): number {
+  const t = Math.max(0, Math.min(1, centerY / Math.max(1, wh)))
+  return Math.max(0, Math.min(bandCount - 1, Math.floor(t * bandCount)))
+}
+
+function countViewportBandOccupancy(
+  images: FloatingImage[],
+  wh: number,
+  bandCount: number
+): number[] {
+  const counts = Array.from({ length: bandCount }, () => 0)
+  for (const img of images) {
+    const band = getViewportBandIndex(getImageViewportCenterY(img, wh), wh, bandCount)
+    counts[band]++
+  }
+  return counts
+}
+
+function pickWeightedInitialViewportBand(bandCount: number): number {
+  const weights = Array.from({ length: bandCount }, (_, i) => {
+    const t = i / Math.max(1, bandCount - 1)
+    return 0.55 + t * 0.85
+  })
+  const total = weights.reduce((sum, w) => sum + w, 0)
+  let roll = Math.random() * total
+  for (let i = 0; i < bandCount; i++) {
+    roll -= weights[i]
+    if (roll <= 0) return i
+  }
+  return bandCount - 1
+}
+
+function pickUnderfilledViewportBand(
+  wh: number,
+  existingImages: FloatingImage[],
+  bandCount: number
+): number {
+  const counts = countViewportBandOccupancy(existingImages, wh, bandCount)
+  const minCount = Math.min(...counts)
+  let bestBand = 0
+  let bestScore = -Infinity
+
+  for (let band = 0; band < bandCount; band++) {
+    const underfill = (minCount + 1) / (counts[band] + 1)
+    const bottomWeight = 0.7 + (band / Math.max(1, bandCount - 1)) * 0.65
+    const score = underfill * bottomWeight
+    if (score > bestScore) {
+      bestScore = score
+      bestBand = band
+    }
+  }
+
+  return bestBand
+}
+
+function setImageToViewportBand(
+  img: FloatingImage,
+  wh: number,
+  bandIndex: number,
+  bandCount: number
+): void {
+  const centerY = getViewportBandCenterY(wh, bandIndex, bandCount)
+  const { minP, maxP } = getVisibleProgressRange(wh, img.height)
+  const targetP = progressForViewportCenterY(wh, img.height, centerY)
+  const jitter = (Math.random() - 0.5) * 0.035
+  img.progress0 = Math.min(maxP, Math.max(minP, targetP + jitter))
+}
+
+function pickInitialLoadProgress(
+  ww: number,
+  wh: number,
+  existingImages: FloatingImage[]
+): number {
+  const bandCount = INITIAL_VIEWPORT_BANDS
+  const approxHeight = getTypicalDisplayHeight(ww)
+  const band =
+    existingImages.length === 0
+      ? pickWeightedInitialViewportBand(bandCount)
+      : pickUnderfilledViewportBand(wh, existingImages, bandCount)
+  const centerY = getViewportBandCenterY(wh, band, bandCount)
+  const { minP, maxP } = getVisibleProgressRange(wh, approxHeight)
+  const targetP = progressForViewportCenterY(wh, approxHeight, centerY)
+  const jitter = (Math.random() - 0.5) * 0.04
+  return Math.min(maxP, Math.max(minP, targetP + jitter))
+}
+
+function redistributeInitialViewportBands(images: FloatingImage[], wh: number): void {
+  const bandCount = INITIAL_VIEWPORT_BANDS
+  let counts = countViewportBandOccupancy(images, wh, bandCount)
+
+  let visible = countVisibleAtLoad(images, wh)
+  for (const img of images) {
     if (visible >= MIN_VISIBLE_AT_LOAD) break
     if (isVisibleAtLoad(img, wh)) continue
-    img.progress0 = Math.min(INITIAL_LOAD_PROGRESS.maxP, img.progress0 + 0.18)
+    const band = pickUnderfilledViewportBand(wh, images, bandCount)
+    setImageToViewportBand(img, wh, band, bandCount)
     if (isVisibleAtLoad(img, wh)) visible++
+    counts = countViewportBandOccupancy(images, wh, bandCount)
+  }
+
+  for (let band = bandCount - 1; band >= 0; band--) {
+    while (counts[band] === 0 && images.length > 0) {
+      let donorIndex = -1
+      let donorCount = -1
+      for (let i = 0; i < images.length; i++) {
+        const donorBand = getViewportBandIndex(getImageViewportCenterY(images[i], wh), wh, bandCount)
+        if (counts[donorBand] > donorCount) {
+          donorCount = counts[donorBand]
+          donorIndex = i
+        }
+      }
+      if (donorIndex < 0 || donorCount < 2) {
+        const fallback = images[Math.floor(Math.random() * images.length)]
+        setImageToViewportBand(fallback, wh, band, bandCount)
+      } else {
+        setImageToViewportBand(images[donorIndex], wh, band, bandCount)
+      }
+      counts = countViewportBandOccupancy(images, wh, bandCount)
+    }
   }
 }
 
@@ -490,14 +640,34 @@ function buildInitialBatch(ww: number, wh: number): FloatingImage[] {
     if (!needsMore) break
 
     guard++
-    const p0 = pickSpreadProgress(out, INITIAL_LOAD_PROGRESS)
+    const bandCount = INITIAL_VIEWPORT_BANDS
+    const targetBand =
+      out.length === 0
+        ? pickWeightedInitialViewportBand(bandCount)
+        : pickUnderfilledViewportBand(wh, out, bandCount)
+    const approxHeight = getTypicalDisplayHeight(ww)
+    const centerY = getViewportBandCenterY(wh, targetBand, bandCount)
+    const { minP, maxP } = getVisibleProgressRange(wh, approxHeight)
+    const jitter = (Math.random() - 0.5) * 0.04
+    const p0 = Math.min(
+      maxP,
+      Math.max(minP, progressForViewportCenterY(wh, approxHeight, centerY) + jitter)
+    )
     const spawned = trySpawnUnusedImage(ww, wh, used, p0, out, true)
 
-    if (spawned) continue
+    if (spawned) {
+      setImageToViewportBand(out[out.length - 1], wh, targetBand, bandCount)
+      continue
+    }
 
     if (visible < MIN_VISIBLE_AT_LOAD) {
-      const fallbackP = INITIAL_LOAD_PROGRESS.minP + Math.random() * (INITIAL_LOAD_PROGRESS.maxP - INITIAL_LOAD_PROGRESS.minP)
-      if (trySpawnUnusedImage(ww, wh, used, fallbackP, out, false)) continue
+      const fallbackP = pickInitialLoadProgress(ww, wh, out)
+      if (trySpawnUnusedImage(ww, wh, used, fallbackP, out, false)) {
+        const img = out[out.length - 1]
+        const fallbackBand = pickUnderfilledViewportBand(wh, out, bandCount)
+        setImageToViewportBand(img, wh, fallbackBand, bandCount)
+        continue
+      }
     }
 
     if (visible >= MIN_VISIBLE_AT_LOAD && out.length >= MIN_VISIBLE_AT_LOAD) break
@@ -505,7 +675,7 @@ function buildInitialBatch(ww: number, wh: number): FloatingImage[] {
     break
   }
 
-  ensureMinimumVisibleAtLoad(out, wh)
+  redistributeInitialViewportBands(out, wh)
   return out
 }
 

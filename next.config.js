@@ -1,5 +1,10 @@
 const path = require('path')
 
+const posthogHost = (process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com').replace(
+  /\/$/,
+  ''
+)
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Parent folder has its own lockfile; without this, Next infers the repo root above
@@ -11,15 +16,15 @@ const nextConfig = {
     return [
       {
         source: '/ingest/static/:path*',
-        destination: 'https://us-assets.i.posthog.com/static/:path*',
+        destination: `${posthogHost}/static/:path*`,
       },
       {
         source: '/ingest/array/:path*',
-        destination: 'https://us-assets.i.posthog.com/array/:path*',
+        destination: `${posthogHost}/array/:path*`,
       },
       {
         source: '/ingest/:path*',
-        destination: 'https://us.i.posthog.com/:path*',
+        destination: `${posthogHost}/:path*`,
       },
     ]
   },

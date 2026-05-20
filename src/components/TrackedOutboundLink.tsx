@@ -1,7 +1,7 @@
 'use client'
 
 import type { AnchorHTMLAttributes, MouseEvent } from 'react'
-import posthog from 'posthog-js'
+import { captureEvent } from '../lib/posthog-capture'
 
 type TrackedOutboundLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
   analyticsLabel?: string
@@ -31,12 +31,16 @@ export default function TrackedOutboundLink({
 
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (hrefValue) {
-      posthog.capture('outbound_link_clicked', {
-        href: hrefValue,
-        destination: inferDestination(hrefValue),
-        label: analyticsLabel ?? null,
-        source: analyticsSource ?? null,
-      })
+      captureEvent(
+        'outbound_link_clicked',
+        {
+          href: hrefValue,
+          destination: inferDestination(hrefValue),
+          label: analyticsLabel,
+          source: analyticsSource,
+        },
+        { transport: 'sendBeacon' }
+      )
     }
     onClick?.(event)
   }

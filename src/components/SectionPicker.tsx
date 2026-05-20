@@ -33,7 +33,7 @@ import {
   BACKGROUND_READY_EVENT,
 } from '../lib/background-ready'
 import { normalizeSectionParam, type SectionId } from '../lib/sections'
-import posthog from 'posthog-js'
+import { captureEvent } from '../lib/posthog-capture'
 
 const socialListSectionTransition = {
   initial: { opacity: 0, y: 10, filter: 'blur(6px)' },
@@ -343,7 +343,7 @@ export default function SectionPicker({
   }
 
   const handleSectionChange = (sectionId: SectionId) => {
-	posthog.capture('section_changed', {
+	captureEvent('section_changed', {
 	  section: sectionId,
 	  previous_section: activeSection,
 	})
@@ -413,7 +413,7 @@ export default function SectionPicker({
 			type="button"
 			onClick={() => {
 			  const next = !isDropdownOpen
-			  posthog.capture('section_dropdown_toggled', { open: next })
+			  captureEvent('section_dropdown_toggled', { open: next })
 			  setIsDropdownOpen(next)
 			}}
 			className={SECTION_MENU_TRIGGER_CLASS}

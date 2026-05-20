@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect } from 'react'
-import posthog from 'posthog-js'
+import { captureEvent } from '../lib/posthog-capture'
 
 export default function SectionPageTracker({ section }: { section: string }) {
   useEffect(() => {
-    posthog.capture('section_page_viewed', { section })
+    captureEvent('section_page_viewed', { section })
   }, [section])
 
   return null

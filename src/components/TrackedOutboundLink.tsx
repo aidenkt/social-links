@@ -1,7 +1,7 @@
 'use client'
 
 import type { AnchorHTMLAttributes, MouseEvent } from 'react'
-import { track } from '@vercel/analytics'
+import posthog from 'posthog-js'
 
 type TrackedOutboundLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
   analyticsLabel?: string
@@ -31,7 +31,7 @@ export default function TrackedOutboundLink({
 
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (hrefValue) {
-      track('outbound_link_click', {
+      posthog.capture('outbound_link_clicked', {
         href: hrefValue,
         destination: inferDestination(hrefValue),
         label: analyticsLabel ?? null,

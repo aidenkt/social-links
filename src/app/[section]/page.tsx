@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { Oswald } from 'next/font/google'
 import BackgroundRoot from '../../components/BackgroundRoot'
 import SectionPicker from '../../components/SectionPicker'
+import SectionPageTracker from '../../components/SectionPageTracker'
 import TrackedOutboundLink from '../../components/TrackedOutboundLink'
 import { normalizeSectionParam, STATIC_SECTION_PATHS } from '../../lib/sections'
 
@@ -32,6 +33,7 @@ export default async function SectionPage({ params }: SectionPageProps) {
   return (
     <div className="relative grid h-full min-h-0 w-full max-w-full grid-rows-[auto_minmax(0,1fr)_auto] items-center justify-items-center gap-4 overflow-x-visible overflow-y-hidden pb-6 max-md:max-h-[100dvh] max-md:overscroll-none md:min-h-screen md:max-h-none md:grid-rows-[20px_minmax(0,1fr)_20px] md:gap-12 md:overflow-x-visible md:overflow-y-visible md:p-20 md:pb-24">
       <BackgroundRoot />
+      <SectionPageTracker section={normalizedSection} />
 
       <main className="row-start-2 z-10 flex min-h-0 w-full max-w-md flex-col justify-self-center px-4 pt-6 max-sm:pt-10 sm:px-6 max-md:relative max-md:z-20 md:px-0 md:pt-4">
         <div className="flex flex-col gap-3 md:gap-8">

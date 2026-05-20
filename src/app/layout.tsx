@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { Analytics } from "@vercel/analytics/next";
 import { PLATFORM_ICON_PATHS } from "../lib/platform-icons";
 import {
   BFCACHE_PENDING_KEY,
@@ -69,7 +68,6 @@ export default function RootLayout({
       >
         <div className="max-md:h-full max-md:min-h-0 max-md:max-h-[100dvh] max-md:overflow-hidden max-md:overscroll-none md:contents">
           {children}
-          <Analytics />
         </div>
       </body>
     </html>

@@ -33,6 +33,7 @@ import {
   BACKGROUND_READY_EVENT,
 } from '../lib/background-ready'
 import { normalizeSectionParam, type SectionId } from '../lib/sections'
+import posthog from 'posthog-js'
 
 const socialListSectionTransition = {
   initial: { opacity: 0, y: 10, filter: 'blur(6px)' },
@@ -342,6 +343,10 @@ export default function SectionPicker({
   }
 
   const handleSectionChange = (sectionId: SectionId) => {
+	posthog.capture('section_changed', {
+	  section: sectionId,
+	  previous_section: activeSection,
+	})
 	setActiveSection(sectionId)
 	setIsDropdownOpen(false)
   }
@@ -406,7 +411,11 @@ export default function SectionPicker({
 		  <button
 			ref={menuTriggerRef}
 			type="button"
-			onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+			onClick={() => {
+			  const next = !isDropdownOpen
+			  posthog.capture('section_dropdown_toggled', { open: next })
+			  setIsDropdownOpen(next)
+			}}
 			className={SECTION_MENU_TRIGGER_CLASS}
 			aria-expanded={isDropdownOpen}
 			aria-haspopup="menu"
@@ -483,7 +492,7 @@ export default function SectionPicker({
 			  <button
 				type="button"
 				key={section.id}
-				onClick={() => setActiveSection(section.id as SectionId)}
+				onClick={() => handleSectionChange(section.id as SectionId)}
 				className={getDesktopNavTabClassName(activeSection === section.id, true)}
 				aria-pressed={activeSection === section.id}
 			  >

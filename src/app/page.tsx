@@ -2,6 +2,7 @@ import Image from "next/image";
 import BackgroundRoot from '../components/BackgroundRoot';
 import SectionPicker from '../components/SectionPicker';
 import TrackedOutboundLink from '../components/TrackedOutboundLink';
+import { buildPersonJsonLd } from '../lib/site';
 import { Oswald } from 'next/font/google'
 
 const oswald = Oswald({
@@ -17,8 +18,14 @@ const headlineLines = (
 )
 
 export default function Home() {
+  const personJsonLd = buildPersonJsonLd()
+
   return (
     <div className="relative grid h-full min-h-0 w-full max-w-full grid-rows-[auto_minmax(0,1fr)_auto] items-center justify-items-center gap-4 overflow-x-visible overflow-y-hidden pb-6 max-md:max-h-[100dvh] max-md:overscroll-none md:min-h-screen md:max-h-none md:grid-rows-[20px_minmax(0,1fr)_20px] md:gap-12 md:overflow-x-visible md:overflow-y-visible md:p-20 md:pb-24">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }}
+      />
       <BackgroundRoot />
 
       <main className="row-start-2 z-10 flex min-h-0 w-full max-w-md flex-col justify-self-center px-4 pt-6 max-sm:pt-10 sm:px-6 max-md:relative max-md:z-20 md:px-0 md:pt-4">

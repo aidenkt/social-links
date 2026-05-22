@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { Oswald } from 'next/font/google'
@@ -6,6 +7,7 @@ import SectionPicker from '../../components/SectionPicker'
 import SectionPageTracker from '../../components/SectionPageTracker'
 import TrackedOutboundLink from '../../components/TrackedOutboundLink'
 import { normalizeSectionParam, STATIC_SECTION_PATHS } from '../../lib/sections'
+import { buildPageMetadata, buildPersonJsonLd } from '../../lib/site'
 
 const oswald = Oswald({
   weight: '500',
@@ -30,8 +32,14 @@ export default async function SectionPage({ params }: SectionPageProps) {
   const normalizedSection = normalizeSectionParam(section)
   if (!normalizedSection) notFound()
 
+  const personJsonLd = buildPersonJsonLd(`/${section}`)
+
   return (
     <div className="relative grid h-full min-h-0 w-full max-w-full grid-rows-[auto_minmax(0,1fr)_auto] items-center justify-items-center gap-4 overflow-x-visible overflow-y-hidden pb-6 max-md:max-h-[100dvh] max-md:overscroll-none md:min-h-screen md:max-h-none md:grid-rows-[20px_minmax(0,1fr)_20px] md:gap-12 md:overflow-x-visible md:overflow-y-visible md:p-20 md:pb-24">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }}
+      />
       <BackgroundRoot />
       <SectionPageTracker section={normalizedSection} />
 
@@ -64,4 +72,11 @@ export default async function SectionPage({ params }: SectionPageProps) {
 
 export function generateStaticParams() {
   return STATIC_SECTION_PATHS.map((section) => ({ section }))
+}
+
+export async function generateMetadata({
+  params,
+}: SectionPageProps): Promise<Metadata> {
+  const { section } = await params
+  return buildPageMetadata(`/${section}`)
 }

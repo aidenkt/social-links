@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { PLATFORM_ICON_PATHS } from "../lib/platform-icons";
 import {
   BFCACHE_PENDING_KEY,
   SOCIAL_LINKS_BACKGROUND_RESUME,
 } from "../lib/background-resume";
+import { buildPageMetadata } from "../lib/site";
 import "./globals.css";
 
 /**
@@ -37,15 +37,7 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
-export const metadata: Metadata = {
-  title: "Aiden's Socials",
-  description: "All of my social media accounts in one place.",
-  icons: {
-    icon: "/favicon.png",
-    shortcut: "/favicon.png",
-    apple: "/favicon.png",
-  },
-};
+export const metadata = buildPageMetadata();
 
 export default function RootLayout({
   children,

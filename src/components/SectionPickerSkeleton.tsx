@@ -80,7 +80,7 @@ export default function SectionPickerSkeleton({
         aria-busy="true"
       >
         <GlassPanel className={GLASS_PANEL_PADDING_CLASS}>
-          <div className="px-2 py-1 md:py-2">{headlineEl}</div>
+          <div className="-mt-1 px-2 py-1 md:-mt-1.5 md:py-1.5">{headlineEl}</div>
           <div className={SOCIAL_LIST_SLOT_CLASS}>
             <div className={getSocialListInnerLayoutClass(activeSectionId)}>
               <SocialListSkeleton />

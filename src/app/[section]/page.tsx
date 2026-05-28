@@ -43,7 +43,7 @@ export default async function SectionPage({ params }: SectionPageProps) {
       <BackgroundRoot />
       <SectionPageTracker section={normalizedSection} />
 
-      <main className="row-start-2 z-10 flex min-h-0 w-full max-w-md flex-col justify-center justify-self-center px-4 pt-6 max-sm:pt-10 sm:px-6 max-md:relative max-md:z-20 md:-translate-y-6 md:px-0 md:pt-0">
+      <main className="row-start-2 z-10 flex min-h-0 w-full max-w-md flex-col justify-center justify-self-center px-4 pt-6 max-sm:pt-10 sm:px-6 max-md:relative max-md:z-20 md:px-0 md:pt-0">
         <div className="flex flex-col gap-3 md:gap-8">
           <SectionPicker
             headlineFontClassName={oswald.className}

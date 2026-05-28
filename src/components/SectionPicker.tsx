@@ -379,7 +379,7 @@ export default function SectionPicker({
 	return (
 	  <div className="flex w-full min-w-0 shrink-0 flex-col gap-3 px-0 py-1 md:gap-3">
 		<GlassPanel className={GLASS_PANEL_PADDING_CLASS}>
-		  <div className="px-2 py-1 md:py-1.5">{headlineEl}</div>
+		  <div className="-mt-1 px-2 py-1 md:-mt-1.5 md:py-1.5">{headlineEl}</div>
 		  <div className={SOCIAL_LIST_SLOT_CLASS}>
 			<AnimatePresence mode="wait" initial={false}>
 			  <SocialListSectionLayer key={activeSection} sectionId={activeSection}>

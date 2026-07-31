@@ -227,6 +227,13 @@ const customComponents: Record<SectionId, () => JSX.Element> = {
 		link="mailto:hi@aidenkt.com"
 	  />
 	  <SocialAccount
+		src="/platform/berkeley.webp"
+		name="akt@berkeley.edu"
+		platform="Email"
+		cta="Email"
+		link="mailto:akt@berkeley.edu"
+	  />
+	  <SocialAccount
 		src="/platform/discord.webp"
 		name="discord.gg/akt"
 		platform="Discord"

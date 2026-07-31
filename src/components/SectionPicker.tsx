@@ -232,6 +232,8 @@ const customComponents: Record<SectionId, () => JSX.Element> = {
 		platform="Email"
 		cta="Email"
 		link="mailto:akt@berkeley.edu"
+		buttonColor="#FDB515"
+		textColor="black"
 	  />
 	  <SocialAccount
 		src="/platform/discord.webp"

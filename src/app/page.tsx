@@ -2,7 +2,7 @@ import Image from "next/image";
 import BackgroundRoot from '../components/BackgroundRoot';
 import SectionPicker from '../components/SectionPicker';
 import TrackedOutboundLink from '../components/TrackedOutboundLink';
-import { buildPersonJsonLd } from '../lib/site';
+import { buildPersonJsonLd, CANONICAL_SITE_URL } from '../lib/site';
 import { Oswald } from 'next/font/google'
 
 const oswald = Oswald({
@@ -37,7 +37,7 @@ export default function Home() {
       <footer className="row-start-3 z-10 flex w-full max-w-md shrink-0 flex-wrap items-center justify-center justify-self-center px-4 py-2 text-sm text-black max-md:relative max-md:z-0">
         <TrackedOutboundLink
           className="flex items-center gap-2 rounded-md py-1 text-black focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/35 focus-visible:ring-offset-2 hover:underline hover:underline-offset-4"
-          href="https://aidenkt.com"
+          href={CANONICAL_SITE_URL}
           target="_blank"
           rel="noopener noreferrer"
           analyticsLabel="Explore more"

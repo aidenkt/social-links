@@ -3,16 +3,17 @@ import { STATIC_SECTION_PATHS } from './sections'
 
 export const PERSON_NAME = 'Aiden Tabrizi'
 export const PERSON_ALIAS = 'AidenKT'
+export const PERSON_ALIASES = ['AidenKT', 'aidenkt', 'akt', 'Aiden K Tabrizi'] as const
+export const CANONICAL_SITE_URL = 'https://aiden.social'
 
 const SITE_TITLE = `${PERSON_NAME} (${PERSON_ALIAS}) — Social Links`
 const SITE_DESCRIPTION =
-  'Official social links for Aiden Tabrizi (AidenKT): Instagram, YouTube, TikTok, LinkedIn, GitHub, Spotify, and more — all in one place.'
+  'Official social links for Aiden Tabrizi (also known as AidenKT, aidenkt, akt, and Aiden K Tabrizi): Instagram, YouTube, TikTok, LinkedIn, GitHub, Spotify, and more — all in one place.'
 
 /** Handles used across platforms — helps search engines associate this page with name queries. */
 export const PERSON_KEYWORDS = [
   PERSON_NAME,
-  PERSON_ALIAS,
-  'Aiden KT',
+  ...PERSON_ALIASES,
   '@aidenkt',
   '@aidentabrizi',
   'Aiden Tabrizi socials',
@@ -23,7 +24,7 @@ export const PERSON_KEYWORDS = [
 ]
 
 export const PERSON_SAME_AS = [
-  'https://aidenkt.com',
+  CANONICAL_SITE_URL,
   'https://instagram.com/aidentabrizi',
   'https://twitter.com/aiden_kt',
   'https://www.youtube.com/@aidenkt',
@@ -60,7 +61,7 @@ export function getSiteUrl(): URL {
   const preview = process.env.VERCEL_URL?.trim()
   if (preview) return new URL(`https://${preview}/`)
 
-  return new URL('https://social.aidenkt.com/')
+  return new URL(`${CANONICAL_SITE_URL}/`)
 }
 
 export function getSectionLabel(section: string): string | undefined {
@@ -176,7 +177,7 @@ export function buildPersonJsonLd(pathname = '') {
         '@type': 'Person',
         '@id': `${siteUrl.origin}/#person`,
         name: PERSON_NAME,
-        alternateName: [PERSON_ALIAS, 'Aiden KT', '@aidenkt', '@aidentabrizi'],
+        alternateName: [...PERSON_ALIASES, '@aidenkt', '@aidentabrizi'],
         url: siteUrl.origin,
         email: 'hi@aidenkt.com',
         sameAs: [...PERSON_SAME_AS],

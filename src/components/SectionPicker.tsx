@@ -1,8 +1,16 @@
 'use client'
 
-import { useState, useEffect, useLayoutEffect, useCallback, useRef, type ReactNode } from 'react'
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+  useRef,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react'
 import { usePathname } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
 import SocialAccount from './SocialAccount'
 import SectionPickerSkeleton from './SectionPickerSkeleton'
@@ -33,6 +41,7 @@ import {
   BACKGROUND_READY_EVENT,
 } from '../lib/background-ready'
 import { normalizeSectionParam, type SectionId } from '../lib/sections'
+import { LINK_SECTIONS } from '../lib/links'
 import { captureEvent } from '../lib/posthog-capture'
 
 const socialListSectionTransition = {
@@ -45,209 +54,60 @@ const socialListSectionTransition = {
 function SocialListSectionLayer({
   sectionId,
   children,
+  reduceMotion,
 }: {
   sectionId: SectionId
   children: ReactNode
+  reduceMotion: boolean
 }) {
   const [layoutClass] = useState(() => getSocialListInnerLayoutClass(sectionId))
 
   return (
-    <motion.div {...socialListSectionTransition} className={layoutClass}>
+    <motion.div
+      {...socialListSectionTransition}
+      initial={reduceMotion ? false : socialListSectionTransition.initial}
+      transition={reduceMotion ? { duration: 0 } : socialListSectionTransition.transition}
+      className={layoutClass}
+    >
       {children}
     </motion.div>
   )
 }
 
 // Define the sections array with section IDs as 'id'
-const sections = [
-  { id: 'main', label: 'Main', content: 'Main socials go here' },
-  { id: 'text', label: 'Text', content: 'Text-based platforms go here' },
-  { id: 'photos', label: 'Photos', content: 'Photo sharing goes here' },
-  { id: 'videos', label: 'Videos', content: 'Video platforms go here' },
-  { id: 'playlists', label: 'Playlists', content: 'Music accounts go here' },
-  { id: 'work', label: 'Work', content: 'Work profiles go here' },
-  { id: 'contact', label: 'Contact', content: 'Contact links go here' },
-]
+const sections = LINK_SECTIONS.map(({ id, label, description }) => ({
+  id,
+  label,
+  content: description,
+}))
 
-// Define the customComponents object with SectionId keys
-const customComponents: Record<SectionId, () => JSX.Element> = {
-  main: () => (
-	<div className={SOCIAL_LIST_CLASS}>
-	  <SocialAccount
-		src="/platform/instagram.webp"
-		name="@aidentabrizi"
-		platform="Instagram"
-		cta="Follow"
-		link="https://instagram.com/aidentabrizi"
-		buttonColor="#FF0068"
-	  />
-	  <SocialAccount
-		src="/platform/twitter.webp"
-		name="@aiden_kt"
-		platform="Twitter"
-		cta="Follow"
-		link="https://twitter.com/aiden_kt"
-		buttonColor="#2188F6"
-	  />
-	  <SocialAccount
-		src="/platform/snapchat.webp"
-		name="aiden.kt"
-		platform="Snapchat"
-		cta="Add"
-		link="https://snapchat.com/t/RrTkU4U4"
-		buttonColor="#FFFC00"
-		textColor="black"
-	  />
-	</div>
-  ),
-  text: () => (
-	<div className={SOCIAL_LIST_CLASS}>
-	  <SocialAccount
-		src="/platform/bluesky.webp"
-		name="@aiden.social"
-		platform="Bluesky"
-		cta="Follow"
-		link="https://bsky.app/profile/aiden.social"
-		buttonColor="#0A7AFF"
-	  />
-	  <SocialAccount
-		src="/platform/threads.webp"
-		name="@aidentabrizi"
-		platform="Threads"
-		cta="Follow"
-		link="https://www.threads.net/@aidentabrizi"
-		buttonColor="#000000"
-	  />
-	  <SocialAccount
-		src="/platform/medium.webp"
-		name="AidenKT"
-		platform="Medium"
-		cta="Follow"
-		link="https://medium.com/@aidenkt"
-		buttonColor="#000000"
-	  />
-	</div>
-  ),
-  photos: () => (
-	<div className={SOCIAL_LIST_CLASS}>
-	  <SocialAccount
-		src="/platform/instagram.webp"
-		name="@aidentabrizi"
-		platform="Instagram"
-		cta="Follow"
-		link="https://instagram.com/aidentabrizi"
-		buttonColor="#FF0068"
-	  />
-	</div>
-  ),
-  videos: () => (
-	<div className={SOCIAL_LIST_CLASS}>
-	  <SocialAccount
-		src="/platform/youtube.webp"
-		name="@aidenkt"
-		platform="YouTube"
-		cta="Subscribe"
-		link="https://www.youtube.com/@aidenkt"
-		buttonColor="#FF0000"
-	  />
-	  <SocialAccount
-		src="/platform/tiktok.webp"
-		name="@aidenkt"
-		platform="TikTok"
-		cta="Follow"
-		link="https://www.tiktok.com/@aidenkt"
-		buttonColor="#EE1D52"
-	  />
-	</div>
-  ),
-  playlists: () => (
-	<div className={SOCIAL_LIST_CLASS}>
-	  <SocialAccount
-		src="/platform/applemusic.webp"
-		name="@aidenkt"
-		platform="Apple Music"
-		cta="Follow"
-		link="https://music.apple.com/profile/aidenkt"
-		buttonColor="#FF0436"
-	  />
-	  <SocialAccount
-		src="/platform/spotify.webp"
-		name="aidenkt"
-		platform="Spotify"
-		cta="Follow"
-		link="https://open.spotify.com/user/aidentab"
-		buttonColor="#1ED760"
-	  />
-	  <SocialAccount
-		src="/platform/tidal.webp"
-		name="@aidenkt"
-		platform="Tidal"
-		cta="Follow"
-		link="https://tidal.com/@aidenkt"
-		buttonColor="#000000"
-	  />
-	</div>
-  ),
-  work: () => (
-	<div className={SOCIAL_LIST_CLASS}>
-	  <SocialAccount
-		src="/platform/linkedin.webp"
-		name="Aiden Tabrizi"
-		platform="LinkedIn"
-		cta="Connect"
-		link="https://www.linkedin.com/in/aidenkt/"
-		buttonColor="#0A66C2"
-	  />
-	  <SocialAccount
-		src="/platform/github.webp"
-		name="aidenkt"
-		platform="GitHub"
-		cta="Follow"
-		link="https://github.com/AidenKT"
-		buttonColor="#000000"
-	  />
-	  <SocialAccount
-		src="/platform/handshake.webp"
-		name="Aiden Tabrizi"
-		platform="Handshake"
-		cta="Connect"
-		link="https://app.joinhandshake.com/profiles/aidenkt"
-		buttonColor="#D3FC53"
-		textColor="black"
-	  />
-	</div>
-  ),
-  contact: () => (
-	<div className={SOCIAL_LIST_CLASS}>
-	  <SocialAccount
-		src="/platform/mail.webp"
-		name="hi@aidenkt.com"
-		platform="Email"
-		cta="Email"
-		link="mailto:hi@aidenkt.com"
-	  />
-	  <SocialAccount
-		src="/platform/berkeley.webp"
-		name="akt@berkeley.edu"
-		platform="Email"
-		cta="Email"
-		link="mailto:akt@berkeley.edu"
-		buttonColor="#FDB515"
-		textColor="black"
-	  />
-	  <SocialAccount
-		src="/platform/discord.webp"
-		name="discord.gg/akt"
-		platform="Discord"
-		cta="Join"
-		link="https://discord.gg/akt"
-		buttonColor="#5865F2"
-	  />
-	</div>
-  ),
-};
+// Render each section's cards from the shared link data (see lib/links.ts),
+// keeping the interactive UI and the agent-facing /llms.txt in perfect sync.
+const customComponents: Record<SectionId, () => JSX.Element> = LINK_SECTIONS.reduce(
+  (acc, section) => {
+    acc[section.id] = () => (
+      <div className={SOCIAL_LIST_CLASS}>
+        {section.links.map((link) => (
+          <SocialAccount
+            key={`${link.platform}-${link.url}`}
+            src={link.icon}
+            name={link.handle}
+            platform={link.platform}
+            cta={link.cta}
+            link={link.url}
+            buttonColor={link.buttonColor}
+            textColor={link.textColor}
+          />
+        ))}
+      </div>
+    )
+    return acc
+  },
+  {} as Record<SectionId, () => JSX.Element>,
+)
 
 const SECTION_MENU_ID = 'section-picker-menu'
+const SECTION_PANEL_ID = 'section-picker-panel'
 
 type SectionPickerProps = {
   headlineFontClassName: string

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import Image from 'next/image'
 import { POST_IMAGE_NATURAL } from '../data/postImageDimensions'
 import {
@@ -930,6 +930,7 @@ export default function FloatingImages() {
   /** Bumped on bfcache restore so floaters remount and replay `initial` → `animate` like a fresh load. */
   const [sceneKey, setSceneKey] = useState(0)
   const [narrowViewport, setNarrowViewport] = useState(false)
+  const reduceMotion = useReducedMotion() ?? false
   const imagesRef = useRef<FloatingImage[]>([])
   const initialImageIdsRef = useRef<Set<string>>(new Set())
   const loadedInitialImageIdsRef = useRef<Set<string>>(new Set())
@@ -1119,6 +1120,7 @@ export default function FloatingImages() {
 
   useEffect(() => {
     if (!isRevealReady) return
+    if (reduceMotion) return
 
     let intervalId: ReturnType<typeof setInterval> | undefined
 
@@ -1160,7 +1162,7 @@ export default function FloatingImages() {
       stopSpawning()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [isRevealReady, narrowViewport, refillDensity, topUpTo])
+  }, [isRevealReady, narrowViewport, reduceMotion, refillDensity, topUpTo])
 
   const handleImageComplete = (id: string) => {
     setImages((prev) => prev.filter((image) => image.id !== id))
@@ -1276,7 +1278,14 @@ export default function FloatingImages() {
                     rotateY: centerTiltY * 1.22,
                     rotateZ: image.roll * centerTiltZMultiplier * 1.02,
                   }}
-                  animate={{
+                  animate={reduceMotion ? {
+                    y: -lift * p0,
+                    scale: scaleA + (scaleB - scaleA) * p0,
+                    z: zA + (zB - zA) * p0,
+                    rotateX: rotXA + (rotXB - rotXA) * p0,
+                    rotateY: centerTiltY * 1.22,
+                    rotateZ: image.roll * centerTiltZMultiplier * 1.02,
+                  } : {
                     y: -lift,
                     scale: scaleB,
                     z: zB,
@@ -1284,11 +1293,11 @@ export default function FloatingImages() {
                     rotateY: centerTiltY,
                     rotateZ: image.roll * centerTiltZMultiplier * 0.94,
                   }}
-                  transition={{
+                  transition={reduceMotion ? { duration: 0 } : {
                     duration,
                     ease: 'linear',
                   }}
-                  onAnimationComplete={() => handleImageComplete(image.id)}
+                  onAnimationComplete={reduceMotion ? undefined : () => handleImageComplete(image.id)}
                   style={{
                     position: 'absolute',
                     left: `${image.x}px`,

@@ -126,7 +126,10 @@ export default function SectionPicker({
   const [activeSection, setActiveSection] = useState<SectionId>(initialSection)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const menuTriggerRef = useRef<HTMLButtonElement>(null)
+  const menuItemRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const [menuMaxHeightPx, setMenuMaxHeightPx] = useState<number | null>(null)
+  const reduceMotion = useReducedMotion() ?? false
 
   const updateMenuMaxHeight = useCallback(() => {
     const trigger = menuTriggerRef.current
@@ -220,6 +223,66 @@ export default function SectionPicker({
 	setIsDropdownOpen(false)
   }
 
+  const handleMenuSectionChange = (sectionId: SectionId) => {
+    handleSectionChange(sectionId)
+    requestAnimationFrame(() => menuTriggerRef.current?.focus())
+  }
+
+  const focusMenuItem = (index: number) => {
+    menuItemRefs.current[index]?.focus()
+  }
+
+  const handleMenuItemKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const lastIndex = sections.length - 1
+    let nextIndex: number | null = null
+
+    if (event.key === 'ArrowDown') nextIndex = index === lastIndex ? 0 : index + 1
+    if (event.key === 'ArrowUp') nextIndex = index === 0 ? lastIndex : index - 1
+    if (event.key === 'Home') nextIndex = 0
+    if (event.key === 'End') nextIndex = lastIndex
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      setIsDropdownOpen(false)
+      menuTriggerRef.current?.focus()
+      return
+    }
+
+    if (nextIndex != null) {
+      event.preventDefault()
+      focusMenuItem(nextIndex)
+    }
+  }
+
+  const handleMenuTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+
+    event.preventDefault()
+    setIsDropdownOpen(true)
+    const activeIndex = sections.findIndex((section) => section.id === activeSection)
+    const index = event.key === 'ArrowDown' ? activeIndex : sections.length - 1
+    requestAnimationFrame(() => focusMenuItem(Math.max(0, index)))
+  }
+
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const lastIndex = sections.length - 1
+    let nextIndex: number | null = null
+
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      nextIndex = index === lastIndex ? 0 : index + 1
+    }
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      nextIndex = index === 0 ? lastIndex : index - 1
+    }
+    if (event.key === 'Home') nextIndex = 0
+    if (event.key === 'End') nextIndex = lastIndex
+    if (nextIndex == null) return
+
+    event.preventDefault()
+    const nextSection = sections[nextIndex]
+    tabRefs.current[nextIndex]?.focus()
+    handleSectionChange(nextSection.id as SectionId)
+  }
+
   const activeLabel = sections.find((section) => section.id === activeSection)?.label
   const socialPanelShellClass = getSocialPanelShellClass(activeSection)
 
@@ -251,7 +314,7 @@ export default function SectionPicker({
 		  <div className="-mt-1 px-2 py-1 md:-mt-1.5 md:py-1.5">{headlineEl}</div>
 		  <div className={SOCIAL_LIST_SLOT_CLASS}>
 			<AnimatePresence mode="wait" initial={false}>
-			  <SocialListSectionLayer key={activeSection} sectionId={activeSection}>
+			  <SocialListSectionLayer key={activeSection} sectionId={activeSection} reduceMotion={reduceMotion}>
 				{renderContent()}
 			  </SocialListSectionLayer>
 			</AnimatePresence>
@@ -270,9 +333,9 @@ export default function SectionPicker({
 		  contentClassName="flex min-h-0 flex-col gap-3 overflow-visible"
 		>
 		  <motion.div
-		    initial={{ opacity: 0, y: 10, scale: 0.985 }}
+		    initial={reduceMotion ? false : { opacity: 0, y: 10, scale: 0.985 }}
 		    animate={{ opacity: 1, y: 0, scale: 1 }}
-		    transition={mobileIntroTransition}
+		    transition={reduceMotion ? { duration: 0 } : mobileIntroTransition}
 		    className="flex flex-col gap-3 overflow-visible"
 		  >
 		  <div className="px-1 text-center">{headlineEl}</div>
@@ -280,11 +343,12 @@ export default function SectionPicker({
 		  <button
 			ref={menuTriggerRef}
 			type="button"
-			onClick={() => {
-			  const next = !isDropdownOpen
-			  captureEvent('section_dropdown_toggled', { open: next })
-			  setIsDropdownOpen(next)
-			}}
+			  onClick={() => {
+				  const next = !isDropdownOpen
+				  captureEvent('section_dropdown_toggled', { open: next })
+				  setIsDropdownOpen(next)
+				}}
+				onKeyDown={handleMenuTriggerKeyDown}
 			className={SECTION_MENU_TRIGGER_CLASS}
 			aria-expanded={isDropdownOpen}
 			aria-haspopup="menu"
@@ -302,10 +366,10 @@ export default function SectionPicker({
 		  <AnimatePresence>
 			{isDropdownOpen && (
 			  <motion.div
-				initial={{ opacity: 0, y: -8, scale: 0.98 }}
+				initial={reduceMotion ? false : { opacity: 0, y: -8, scale: 0.98 }}
 				animate={{ opacity: 1, y: 0, scale: 1 }}
 				exit={{ opacity: 0, y: -6, scale: 0.98 }}
-				transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+				transition={reduceMotion ? { duration: 0 } : { duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
 				id={SECTION_MENU_ID}
 				role="menu"
 				aria-label="Link categories"
@@ -314,12 +378,14 @@ export default function SectionPicker({
 				  menuMaxHeightPx != null ? { maxHeight: menuMaxHeightPx } : undefined
 				}
 			  >
-				{sections.map((section) => (
+				{sections.map((section, index) => (
 				  <button
 					type="button"
 					key={section.id}
+					ref={(element) => { menuItemRefs.current[index] = element }}
 					role="menuitem"
-					onClick={() => handleSectionChange(section.id as SectionId)}
+					onClick={() => handleMenuSectionChange(section.id as SectionId)}
+					onKeyDown={(event) => handleMenuItemKeyDown(event, index)}
 					className={getSectionMenuItemClassName(activeSection === section.id)}
 				  >
 					{section.label}
@@ -332,7 +398,7 @@ export default function SectionPicker({
 		</motion.div>
 		<div className={`${SOCIAL_LIST_SLOT_CLASS} z-0`}>
 		  <AnimatePresence mode="wait" initial={false}>
-		    <SocialListSectionLayer key={activeSection} sectionId={activeSection}>
+		    <SocialListSectionLayer key={activeSection} sectionId={activeSection} reduceMotion={reduceMotion}>
 		      {renderContent()}
 		    </SocialListSectionLayer>
 		  </AnimatePresence>
@@ -357,13 +423,19 @@ export default function SectionPicker({
 		        className={`pointer-events-auto relative z-10 ${DESKTOP_NAV_TABS_CLASS}`}
 		        role="tablist"
 		      >
-			{sections.map((section) => (
+			{sections.map((section, index) => (
 			  <button
 				type="button"
 				key={section.id}
+				ref={(element) => { tabRefs.current[index] = element }}
+				role="tab"
+				id={`section-tab-${section.id}`}
+				aria-controls={SECTION_PANEL_ID}
+				aria-selected={activeSection === section.id}
+				tabIndex={activeSection === section.id ? 0 : -1}
 				onClick={() => handleSectionChange(section.id as SectionId)}
+				onKeyDown={(event) => handleTabKeyDown(event, index)}
 				className={getDesktopNavTabClassName(activeSection === section.id, true)}
-				aria-pressed={activeSection === section.id}
 			  >
 				{section.label}
 			  </button>
@@ -378,13 +450,18 @@ export default function SectionPicker({
 		  {headlineEl}
 		</div>
 	  )}
-	  <div className={`${socialPanelShellClass} max-md:hidden`}>
+	  <div
+		className={`${socialPanelShellClass} max-md:hidden`}
+		id={SECTION_PANEL_ID}
+		role="tabpanel"
+		aria-labelledby={`section-tab-${activeSection}`}
+	  >
 		  <div aria-hidden className={GLASS_PANEL_SHIM_CLASS} />
 		  <div aria-hidden className={GLASS_PANEL_BRAND_TINT_CLASS} />
 		  <div className="relative z-10 w-full">
 		    <div className={SOCIAL_LIST_SLOT_CLASS}>
 		      <AnimatePresence mode="wait" initial={false}>
-		        <SocialListSectionLayer key={activeSection} sectionId={activeSection}>
+		        <SocialListSectionLayer key={activeSection} sectionId={activeSection} reduceMotion={reduceMotion}>
 		          {renderContent()}
 		        </SocialListSectionLayer>
 		      </AnimatePresence>

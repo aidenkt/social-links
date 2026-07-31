@@ -80,7 +80,7 @@ body::before {
 
   /* Mobile section picker — same card language as SocialAccount rows */
   .section-menu-trigger {
-    @apply flex w-full min-h-[2.75rem] cursor-pointer items-center justify-between gap-2.5 rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-left shadow-sm transition-[transform,box-shadow,border-color,background-color] duration-300 ease-out [-webkit-tap-highlight-color:transparent] hover:border-neutral-400/70 hover:bg-neutral-50 hover:shadow-md active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/30 focus-visible:ring-offset-2;
+    @apply flex w-full min-h-[2.75rem] cursor-pointer items-center justify-between gap-2.5 rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-left shadow-sm transition-[transform,box-shadow,border-color,background-color] duration-300 ease-out [-webkit-tap-highlight-color:transparent] hover:border-neutral-400/70 hover:bg-neutral-50 hover:shadow-md active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2;
   }
 
   .section-menu-trigger[aria-expanded='true'] {
@@ -106,7 +106,7 @@ body::before {
   }
 
   .section-menu-item {
-    @apply flex w-full cursor-pointer items-center rounded-lg border border-transparent px-3 py-3 text-left text-base font-medium text-neutral-500 transition-[border-color,box-shadow,background-color,color] duration-300 ease-out active:scale-[0.99] hover:border-neutral-200/70 hover:bg-neutral-50 hover:text-neutral-900 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/25 focus-visible:ring-offset-2;
+    @apply flex w-full cursor-pointer items-center rounded-lg border border-transparent px-3 py-3 text-left text-base font-medium text-neutral-500 transition-[border-color,box-shadow,background-color,color] duration-300 ease-out active:scale-[0.99] hover:border-neutral-200/70 hover:bg-neutral-50 hover:text-neutral-900 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2;
   }
 
   .section-menu-item-active {
@@ -207,5 +207,16 @@ body::before {
 
   .glass-panel[data-brand-tint] .glass-panel-brand-tint {
     opacity: 0.78;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

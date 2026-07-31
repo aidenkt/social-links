@@ -63,7 +63,7 @@ export function getDesktopNavTabClassName(active: boolean, interactive = false):
     ? 'cursor-pointer hover:bg-white hover:shadow-md'
     : 'cursor-pointer hover:border-neutral-200/80 hover:bg-neutral-100 hover:text-neutral-900 hover:shadow-sm'
 
-  return `${base} transition-[color,background-color,box-shadow,border-color] duration-200 ${interactiveAffordance} focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/35 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-50`
+  return `${base} transition-[color,background-color,box-shadow,border-color] duration-200 ${interactiveAffordance} focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-50`
 }
 
 /**

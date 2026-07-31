@@ -54,7 +54,7 @@ export default function SocialAccount({
           analyticsLabel={cta}
           analyticsSource={`social-card:${platform}`}
           aria-label={`${cta}, ${name} on ${platform}`}
-          className="absolute inset-0 z-20 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/35 focus-visible:ring-offset-2 md:hidden"
+          className="absolute inset-0 z-20 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2 md:hidden"
         />
         <div className="flex-shrink-0 select-none">
           <Image
@@ -87,7 +87,7 @@ export default function SocialAccount({
         </span>
         <TrackedOutboundLink
           href={link}
-          className="relative z-10 hidden h-9 min-w-[5.75rem] shrink-0 items-center justify-center rounded-full px-4 text-sm font-medium tabular-nums transition-all hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/35 focus-visible:ring-offset-2 md:inline-flex"
+          className="relative z-10 hidden h-9 min-w-[5.75rem] shrink-0 items-center justify-center rounded-full px-4 text-sm font-medium tabular-nums transition-all hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2 md:inline-flex"
           target="_blank"
           rel={link.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
           analyticsLabel={cta}

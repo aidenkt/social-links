@@ -48,9 +48,9 @@ export const LINK_SECTIONS: LinkSection[] = [
       },
       {
         platform: 'Twitter',
-        handle: '@aiden_kt',
+        handle: '@aidnkt',
         cta: 'Follow',
-        url: 'https://twitter.com/aiden_kt',
+        url: 'https://twitter.com/aidnkt',
         icon: '/platform/twitter.webp',
         buttonColor: '#2188F6',
       },

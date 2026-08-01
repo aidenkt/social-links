@@ -26,7 +26,7 @@ export const PERSON_KEYWORDS = [
 export const PERSON_SAME_AS = [
   CANONICAL_SITE_URL,
   'https://instagram.com/aidentabrizi',
-  'https://twitter.com/aiden_kt',
+  'https://twitter.com/aidnkt',
   'https://www.youtube.com/@aidenkt',
   'https://www.tiktok.com/@aidenkt',
   'https://www.linkedin.com/in/aidenkt/',

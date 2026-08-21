@@ -80,11 +80,11 @@ body::before {
 
   /* Mobile section picker — same card language as SocialAccount rows */
   .section-menu-trigger {
-    @apply flex w-full min-h-[2.75rem] cursor-pointer items-center justify-between gap-2.5 rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-left shadow-sm transition-[transform,box-shadow,border-color,background-color] duration-300 ease-out [-webkit-tap-highlight-color:transparent] hover:border-neutral-400/70 hover:bg-neutral-50 hover:shadow-md active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2;
+    @apply flex w-full min-h-[2.75rem] cursor-pointer items-center justify-between gap-2.5 rounded-lg border border-neutral-200/70 bg-white px-3 py-2 text-left shadow-sm transition-[transform,box-shadow,border-color] duration-300 ease-out [-webkit-tap-highlight-color:transparent] hover:border-white/90 hover:shadow-md active:scale-[0.99] focus:outline-none focus-visible:border-white/90 focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2;
   }
 
   .section-menu-trigger[aria-expanded='true'] {
-    @apply border-neutral-400/70 bg-neutral-50 shadow-md;
+    @apply border-white/90 shadow-md;
   }
 
   .section-menu-trigger-chevron {

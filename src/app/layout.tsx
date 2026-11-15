@@ -5,6 +5,7 @@ import {
   SOCIAL_LINKS_BACKGROUND_RESUME,
 } from "../lib/background-resume";
 import { buildPageMetadata } from "../lib/site";
+import OwnerCorner from "../components/OwnerCorner";
 import "./globals.css";
 
 /**
@@ -61,6 +62,7 @@ export default function RootLayout({
         <div className="max-md:h-full max-md:min-h-0 max-md:max-h-[100dvh] max-md:overflow-hidden max-md:overscroll-none md:contents">
           {children}
         </div>
+        <OwnerCorner />
       </body>
     </html>
   );

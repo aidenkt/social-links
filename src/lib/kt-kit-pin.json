@@ -1,6 +1,6 @@
 {
   "origin": "https://accounts.aidenkt.com",
-  "from": "local build",
+  "from": "https://accounts.aidenkt.com/kit/manifest.json",
   "js": {
     "file": "kit.da86a02dab.js",
     "integrity": "sha384-Sn5x6DQbDktwW3SnX5GB7ZaTlGNu5r++Hijyy361cl74hCsasUiaHcfUlxkf6Xb/"

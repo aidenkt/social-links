@@ -1,22 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import pin from '../lib/kt-kit-pin.json'
 
 /**
- * The owner's corner: when Aiden is signed in (Sign in with KT Account, see /login), his
- * aiden.social picture sits in the top-right corner and opens a card shaped like the KT
- * Accounts kit's account menu (banner, picture, name, handle, then the actions).
- *
- * Visitors get nothing: the component only asks the server (/auth/session) when the
- * page-readable hint cookie is present, and renders nothing otherwise. The hint grants
- * nothing; the session itself is an HttpOnly cookie checked on the server.
- *
- * Preview Mode hides the corner so the page looks exactly as visitors see it. It lasts
- * until Escape is pressed or the page is reloaded.
+ * The owner's corner, drawn by the KT Accounts kit in supplied-session mode: this site signs
+ * Aiden in itself (/login) and hands the kit the person to draw. Visitors get nothing: the
+ * kit is loaded only after /auth/session confirms the owner, and that is asked only when
+ * the page-readable hint cookie is present.
  */
 
 const HINT_COOKIE = '__Host-as.owner'
-const SETTINGS_URL = 'https://accounts.aidenkt.com/settings'
 
 interface Profile {
   displayName: string
@@ -25,7 +19,24 @@ interface Profile {
   fallbackPicture: string | null
 }
 
-type State = { kind: 'none' } | { kind: 'owner'; profile: Profile; csrf: string }
+interface MenuItem {
+  label: string
+  icon?: string
+  toggle?: boolean
+  checked?: boolean
+  onChange?: (checked: boolean) => void
+}
+
+interface Kit {
+  supply?: (
+    person: { displayName: string; handle?: string | null; avatarUrl: string; bannerUrl?: string | null; profileUrl?: string | null } | null,
+    opts?: { onLogOut?: () => void | Promise<void> }
+  ) => void
+  menuItems?: (items: MenuItem[]) => void
+  close?: () => void
+}
+
+const kit = () => (window as unknown as { ktAccounts?: Kit }).ktAccounts
 
 function hasHint(): boolean {
   try {
@@ -35,49 +46,35 @@ function hasHint(): boolean {
   }
 }
 
-function Icon({ paths }: { paths: string[] }) {
-  return (
-    <svg className="oc-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      {paths.map((d) => (
-        <path key={d} d={d} />
-      ))}
-    </svg>
-  )
+/** The aiden.social picture, or the KT picture when it does not load. */
+function pictureThatLoads(p: Profile): Promise<string> {
+  return new Promise((resolve) => {
+    if (!p.fallbackPicture) return resolve(p.picture)
+    const img = new Image()
+    img.onload = () => resolve(p.picture)
+    img.onerror = () => resolve(p.fallbackPicture!)
+    img.src = p.picture
+  })
 }
 
-// The KT Accounts kit's own line icons (KT_STROKES), plus an eye drawn the same way.
-const EYE = ['M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z', 'M12 14.75a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5Z']
-const SETTINGS = ['M4 7h10M18 7h2M4 17h4M12 17h8', 'M16 9.25a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5ZM10 19.25a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5Z']
-const SIGN_OUT = ['M14.5 4.5h4v15h-4', 'M10 8l-4 4 4 4M6 12h9']
-
-function Avatar({ profile, size }: { profile: Profile; size: 'sm' | 'lg' }) {
-  const [src, setSrc] = useState(profile.picture)
-  const px = size === 'sm' ? 40 : 64
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      className={`oc-av oc-av-${size}`}
-      src={src}
-      alt=""
-      width={px}
-      height={px}
-      decoding="async"
-      draggable={false}
-      onError={() => {
-        if (profile.fallbackPicture && src !== profile.fallbackPicture) setSrc(profile.fallbackPicture)
-      }}
-    />
-  )
+function loadKit(): Promise<Kit | null> {
+  if (kit()) return Promise.resolve(kit()!)
+  return new Promise((resolve) => {
+    const s = document.createElement('script')
+    s.src = `${pin.origin}/kit/${pin.js.file}`
+    s.integrity = pin.js.integrity
+    s.crossOrigin = 'anonymous'
+    s.async = true
+    s.onload = () => resolve(kit() ?? null)
+    s.onerror = () => resolve(null)
+    document.head.appendChild(s)
+  })
 }
 
 export default function OwnerCorner() {
-  const [state, setState] = useState<State>({ kind: 'none' })
-  const [open, setOpen] = useState(false)
+  const [owner, setOwner] = useState<{ profile: Profile; csrf: string } | null>(null)
   const [preview, setPreview] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const buttonRef = useRef<HTMLButtonElement>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-  const menuId = useId()
+  const setPreviewRef = useRef(setPreview)
 
   useEffect(() => {
     if (!hasHint()) return
@@ -86,136 +83,73 @@ export default function OwnerCorner() {
       .then((r) => (r.ok ? r.json() : null))
       .then((body: unknown) => {
         const b = body as { signedIn?: unknown; profile?: Profile; csrf?: unknown } | null
-        if (b && b.signedIn === true && b.profile && typeof b.csrf === 'string') {
-          setState({ kind: 'owner', profile: b.profile, csrf: b.csrf })
-        }
+        if (b && b.signedIn === true && b.profile && typeof b.csrf === 'string') setOwner({ profile: b.profile, csrf: b.csrf })
       })
       .catch(() => {})
     return () => ctl.abort()
   }, [])
 
-  const items = useCallback(
-    () => Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]') ?? []),
-    []
-  )
-
-  const close = useCallback((returnFocus: boolean) => {
-    setOpen(false)
-    if (returnFocus) buttonRef.current?.focus()
-  }, [])
-
-  // Focus the first item on open; close on a click outside.
+  // Once the host element is in the page: load the pinned kit and hand it the owner.
   useEffect(() => {
-    if (!open) return
-    items()[0]?.focus()
-    const onDown = (e: PointerEvent) => {
-      const t = e.target as Node
-      if (!menuRef.current?.contains(t) && !buttonRef.current?.contains(t)) close(false)
+    if (!owner) return
+    let cancelled = false
+    void (async () => {
+      const [k, avatarUrl] = await Promise.all([loadKit(), pictureThatLoads(owner.profile)])
+      if (cancelled || !k?.supply || !k.menuItems) return
+      k.menuItems([
+        { label: 'Preview Mode', icon: 'eye', toggle: true, checked: false, onChange: (on) => setPreviewRef.current(on) },
+      ])
+      k.supply(
+        {
+          displayName: owner.profile.displayName,
+          handle: owner.profile.handle,
+          avatarUrl,
+          bannerUrl: '/owner-banner.svg',
+          profileUrl: '/',
+        },
+        {
+          onLogOut: async () => {
+            try {
+              await fetch('/auth/logout', { method: 'POST', credentials: 'same-origin', headers: { 'x-csrf-token': owner.csrf } })
+            } catch {
+              /* the reload shows whatever the server decided */
+            }
+            window.location.reload()
+          },
+        }
+      )
+    })()
+    return () => {
+      cancelled = true
     }
-    document.addEventListener('pointerdown', onDown)
-    return () => document.removeEventListener('pointerdown', onDown)
-  }, [open, items, close])
+  }, [owner])
 
-  // Escape leaves Preview Mode.
+  // Preview Mode: the corner is hidden; Escape brings it back.
   useEffect(() => {
-    if (!preview) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setPreview(false)
+    const k = kit()
+    if (preview) {
+      k?.close?.()
+      const onKey = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') setPreview(false)
+      }
+      window.addEventListener('keydown', onKey)
+      return () => window.removeEventListener('keydown', onKey)
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    k?.menuItems?.([
+      { label: 'Preview Mode', icon: 'eye', toggle: true, checked: false, onChange: (on) => setPreviewRef.current(on) },
+    ])
   }, [preview])
 
-  const onMenuKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
-    const list = items()
-    const i = list.indexOf(document.activeElement as HTMLElement)
-    const go = (n: number) => {
-      e.preventDefault()
-      list[(n + list.length) % list.length]?.focus()
-    }
-    if (e.key === 'ArrowDown') go(i + 1)
-    else if (e.key === 'ArrowUp') go(i - 1)
-    else if (e.key === 'Home') go(0)
-    else if (e.key === 'End') go(list.length - 1)
-    else if (e.key === 'Escape') {
-      e.preventDefault()
-      close(true)
-    } else if (e.key === 'Tab') close(false)
-  }
-
-  if (state.kind !== 'owner' || preview) return null
-  const { profile, csrf } = state
-
-  const logOut = async () => {
-    if (busy) return
-    setBusy(true)
-    try {
-      await fetch('/auth/logout', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'x-csrf-token': csrf },
-      })
-    } catch {
-      /* the reload below shows whatever the server decided */
-    }
-    window.location.reload()
-  }
-
+  if (!owner) return null
   return (
-    <div className="owner-corner" data-owner-corner="">
-      <button
-        ref={buttonRef}
-        type="button"
-        className="oc-me"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? menuId : undefined}
-        aria-label={`Account menu for ${profile.displayName}`}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <Avatar profile={profile} size="sm" />
-      </button>
-      {open ? (
-        <div ref={menuRef} id={menuId} className="oc-menu" role="menu" aria-label="Account" onKeyDown={onMenuKey}>
-          <div className="oc-who">
-            <span className="oc-banner" aria-hidden="true" />
-            <span className="oc-body">
-              <span className="oc-av-ring">
-                <Avatar profile={profile} size="lg" />
-              </span>
-              <span className="oc-text">
-                <b className="oc-name">{profile.displayName}</b>
-                <span className="oc-handle">@{profile.handle}</span>
-              </span>
-            </span>
-          </div>
-          <div className="oc-acts">
-            <button
-              type="button"
-              role="menuitemcheckbox"
-              aria-checked={preview}
-              className="oc-item"
-              tabIndex={-1}
-              onClick={() => {
-                setOpen(false)
-                setPreview(true)
-              }}
-            >
-              <Icon paths={EYE} />
-              <span className="oc-label">Preview Mode</span>
-              <span className="oc-switch" aria-hidden="true" />
-            </button>
-            <a role="menuitem" className="oc-item" href={SETTINGS_URL} tabIndex={-1}>
-              <Icon paths={SETTINGS} />
-              <span className="oc-label">Account Settings</span>
-            </a>
-            <button type="button" role="menuitem" className="oc-item" tabIndex={-1} onClick={logOut} disabled={busy}>
-              <Icon paths={SIGN_OUT} />
-              <span className="oc-label">Log Out</span>
-            </button>
-          </div>
-        </div>
-      ) : null}
-    </div>
+    <div
+      data-kt-account=""
+      data-kt-fixed=""
+      data-kt-session="supplied"
+      data-variant="glass"
+      data-card="glass"
+      data-owner-corner=""
+      style={preview ? { display: 'none' } : undefined}
+    />
   )
 }

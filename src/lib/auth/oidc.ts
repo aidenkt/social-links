@@ -2,7 +2,8 @@ import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose'
 
 /**
  * "Sign in with KT Account": the OpenID Connect authorization code flow with PKCE (S256)
- * against KT Accounts, run entirely on this server as a confidential client. Each step
+ * against KT Accounts, run entirely on this server: a public client (client_id and the PKCE
+ * verifier), or a confidential one when a client secret is set. Each step
  * takes what it needs as arguments (fetch and the key set too), so tests can run it
  * against a local mock of KT Accounts.
  */
@@ -80,22 +81,22 @@ function basicAuth(id: string, secret: string): string {
 }
 
 export async function exchangeCode(
-  opts: { issuer: string; clientId: string; clientSecret: string; code: string; login: LoginState },
+  opts: { issuer: string; clientId: string; clientSecret: string | null; code: string; login: LoginState },
   fetchImpl: typeof fetch = fetch
 ): Promise<TokenResult | null> {
+  const form = new URLSearchParams({
+    grant_type: 'authorization_code',
+    code: opts.code,
+    redirect_uri: opts.login.redirectUri,
+    code_verifier: opts.login.verifier,
+  })
+  const headers: Record<string, string> = { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }
+  if (opts.clientSecret) headers.authorization = basicAuth(opts.clientId, opts.clientSecret)
+  else form.set('client_id', opts.clientId)
   const res = await fetchImpl(new URL('/oauth/token', opts.issuer), {
     method: 'POST',
-    headers: {
-      authorization: basicAuth(opts.clientId, opts.clientSecret),
-      'content-type': 'application/x-www-form-urlencoded',
-      accept: 'application/json',
-    },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
-      code: opts.code,
-      redirect_uri: opts.login.redirectUri,
-      code_verifier: opts.login.verifier,
-    }).toString(),
+    headers,
+    body: form.toString(),
     cache: 'no-store',
     redirect: 'error',
     signal: AbortSignal.timeout(10_000),

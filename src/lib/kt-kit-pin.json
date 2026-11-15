@@ -1,0 +1,12 @@
+{
+  "origin": "https://accounts.aidenkt.com",
+  "from": "local build",
+  "js": {
+    "file": "kit.da86a02dab.js",
+    "integrity": "sha384-Sn5x6DQbDktwW3SnX5GB7ZaTlGNu5r++Hijyy361cl74hCsasUiaHcfUlxkf6Xb/"
+  },
+  "css": {
+    "file": "kit.73eb5a3cca.css",
+    "integrity": "sha384-S6m/0AcoyitsnVUsxueV3LSmgCILkbKNF05ATQE2Rco8qCHLKFT7VTzNdcvkesUa"
+  }
+}

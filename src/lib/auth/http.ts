@@ -29,9 +29,9 @@ export function json(body: unknown, status = 200): NextResponse {
 
 /** Every message these routes can show. Errors start with "Please". */
 export const MESSAGES = {
-  notOwner: 'Please sign in with Aiden’s KT Account. Only the owner of aiden.social can sign in here.',
-  retry: 'Please start signing in again.',
-  unavailable: 'Please try again later. Sign-in is not available right now.',
+  notOwner: 'Please sign in with Aiden’s KT Account.',
+  retry: 'Please try again.',
+  unavailable: 'Please try again later.',
 } as const
 
 const STYLE = `

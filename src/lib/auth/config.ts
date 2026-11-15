@@ -5,7 +5,7 @@ import 'server-only'
  * request so a missing value fails that request closed instead of the build.
  *
  *   KT_CLIENT_ID        the app's client ID from the KT Developer Portal
- *   KT_CLIENT_SECRET    its client secret (confidential client)
+ *   KT_CLIENT_SECRET    optional: only for a confidential client (aiden.social is a public client)
  *   SESSION_SECRET      at least 32 characters; seals the login and session cookies
  *   KT_ACCOUNTS_ORIGIN  optional, default https://accounts.aidenkt.com (local mocks only)
  *   KT_REDIRECT_URI     optional, default <this site's origin>/auth/callback
@@ -13,7 +13,8 @@ import 'server-only'
 export interface AuthConfig {
   issuer: string
   clientId: string
-  clientSecret: string
+  /** null: a public client (PKCE, client_id in the token request) */
+  clientSecret: string | null
   sessionSecret: string
   redirectUriOverride: string | null
 }
@@ -22,9 +23,9 @@ export const DEFAULT_KT_ORIGIN = 'https://accounts.aidenkt.com'
 
 export function readAuthConfig(env: Record<string, string | undefined> = process.env): AuthConfig | null {
   const clientId = env.KT_CLIENT_ID?.trim() ?? ''
-  const clientSecret = env.KT_CLIENT_SECRET?.trim() ?? ''
+  const clientSecret = env.KT_CLIENT_SECRET?.trim() || null
   const sessionSecret = env.SESSION_SECRET ?? ''
-  if (!clientId || clientId.length > 80 || !clientSecret || sessionSecret.length < 32) return null
+  if (!clientId || clientId.length > 80 || sessionSecret.length < 32) return null
   const issuer = originOf(env.KT_ACCOUNTS_ORIGIN?.trim() || DEFAULT_KT_ORIGIN)
   if (!issuer) return null
   const redirect = env.KT_REDIRECT_URI?.trim()

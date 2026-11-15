@@ -161,6 +161,18 @@ describe('token exchange', () => {
     expect(body.get('redirect_uri')).toBe(login.redirectUri)
     expect(body.has('client_secret')).toBe(false)
   })
+  it('a public client sends client_id in the form and no Authorization header', async () => {
+    let seen: RequestInit | null = null
+    const fake = (async (_url: URL, init: RequestInit) => {
+      seen = init
+      return new Response(JSON.stringify(good), { status: 200 })
+    }) as unknown as typeof fetch
+    expect(await exchangeCode({ issuer: ISS, clientId: CLIENT, clientSecret: null, code: 'ktx_c', login }, fake)).not.toBeNull()
+    expect((seen!.headers as Record<string, string>).authorization).toBeUndefined()
+    const body = new URLSearchParams(String(seen!.body))
+    expect(body.get('client_id')).toBe(CLIENT)
+    expect(body.get('code_verifier')).toBe(login.verifier)
+  })
   it('refuses errors and odd token shapes', async () => {
     const reply = (status: number, b: unknown) => (async () => new Response(JSON.stringify(b), { status })) as unknown as typeof fetch
     const args = { issuer: ISS, clientId: CLIENT, clientSecret: 's', code: 'ktx_c', login }

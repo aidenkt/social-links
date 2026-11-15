@@ -8,7 +8,7 @@ import { exportJWK, generateKeyPair, SignJWT, type JWK } from 'jose'
  */
 const ISS = 'https://accounts.example.test'
 const SITE = 'https://aiden.social'
-const env = { KT_CLIENT_ID: 'kt_client_123', KT_CLIENT_SECRET: 'secret', SESSION_SECRET: 's'.repeat(48), KT_ACCOUNTS_ORIGIN: ISS }
+const env = { KT_CLIENT_ID: 'ktc_puMtEsGWmWlUFKZNpRLsWA', KT_CLIENT_SECRET: '', SESSION_SECRET: 's'.repeat(48), KT_ACCOUNTS_ORIGIN: ISS }
 
 let privateKey: CryptoKey
 let jwk: JWK
@@ -92,8 +92,12 @@ describe('sign-in routes', () => {
     expect(session).toMatch(/Max-Age=604800/)
     expect(session).not.toContain('kto_')
     expect(cookieOf(res, '__Host-as.owner')).toBe('1')
+    // Public client: no secret, client_id and the PKCE verifier in the form.
     const token = calls.find((c) => c.url === `${ISS}/oauth/token`)!
-    expect((token.init!.headers as Record<string, string>).authorization).toMatch(/^Basic /)
+    expect((token.init!.headers as Record<string, string>).authorization).toBeUndefined()
+    const form = new URLSearchParams(String(token.init!.body))
+    expect(form.get('client_id')).toBe(env.KT_CLIENT_ID)
+    expect(form.get('code_verifier')).toMatch(/^[A-Za-z0-9_-]{43}$/)
     const identity = calls.find((c) => c.url === `${ISS}/oauth/identity`)!
     expect(JSON.parse(String(identity.init!.body))).toEqual({ displayName: 'Aiden Tabrizi', handle: 'aidenkt', profileUrl: 'https://aiden.social/' })
     expect(calls.some((c) => c.url === `${ISS}/oauth/identity/picture` && c.init?.method === 'PUT')).toBe(true)
@@ -121,7 +125,7 @@ describe('sign-in routes', () => {
     const { to, login } = await startLogin()
     const res = await callback(`code=ktx_${'c'.repeat(43)}&state=${to.searchParams.get('state')}&iss=${encodeURIComponent(ISS)}`, login)
     expect(res.status).toBe(403)
-    expect(await res.text()).toContain('Please sign in with Aiden’s KT Account.')
+    expect(await res.text()).toContain('Please sign in with Aiden’s KT Account.</p>')
     expect(cookieOf(res, '__Host-as.session')).toBeUndefined()
     expect(calls.some((c) => c.url.includes('/oauth/identity'))).toBe(false)
     expect(res.headers.get('content-security-policy')).toMatch(/default-src 'none'; style-src 'sha256-/)
@@ -136,6 +140,16 @@ describe('sign-in routes', () => {
     expect(calls.some((c) => c.url === `${ISS}/oauth/token`)).toBe(false)
   })
 
+  it('a confidential client (KT_CLIENT_SECRET set) authenticates with HTTP Basic', async () => {
+    vi.stubEnv('KT_CLIENT_SECRET', 'secret')
+    const { to, login } = await startLogin()
+    const res = await callback(`code=ktx_${'c'.repeat(43)}&state=${to.searchParams.get('state')}&iss=${encodeURIComponent(ISS)}`, login)
+    expect(res.status).toBe(303)
+    const token = calls.find((c) => c.url === `${ISS}/oauth/token`)!
+    expect((token.init!.headers as Record<string, string>).authorization).toMatch(/^Basic /)
+    expect(new URLSearchParams(String(token.init!.body)).has('client_id')).toBe(false)
+  })
+
   it('/auth/session without a session answers 401 and clears the hint', async () => {
     const { GET } = await import('../src/app/auth/session/route')
     const res = await GET(new NextRequest(`${SITE}/auth/session`, { headers: { cookie: '__Host-as.owner=1' } }))
@@ -144,7 +158,7 @@ describe('sign-in routes', () => {
   })
 
   it('is unavailable (503) when not configured', async () => {
-    vi.stubEnv('KT_CLIENT_SECRET', '')
+    vi.stubEnv('SESSION_SECRET', 'short')
     const { GET } = await import('../src/app/login/route')
     const res = await GET(new NextRequest(`${SITE}/login`))
     expect(res.status).toBe(503)

@@ -8,16 +8,16 @@ And costs money.
 ## Owner sign-in (Sign in with KT Account)
 
 Aiden signs in at `/login` (not linked anywhere) with his KT Account over OpenID Connect
-(code flow + PKCE, confidential client, checked on the server). Only the KT Accounts owner
+(code flow + PKCE, public client, checked on the server). Only the KT Accounts owner
 (`is_owner`) gets a session; visitors see the page unchanged.
 
 Environment variables (Vercel, production and preview; never `NEXT_PUBLIC_`):
 
 - `KT_CLIENT_ID`
-- `KT_CLIENT_SECRET`
+- `KT_CLIENT_SECRET` (optional; only for a confidential client)
 - `SESSION_SECRET` (at least 32 characters)
 - `KT_ACCOUNTS_ORIGIN` (optional, local mocks only)
 - `KT_REDIRECT_URI` (optional; defaults to `<origin>/auth/callback`)
 
-`npm test` runs the sign-in tests. `node scripts/make-owner-picture.mjs` rebuilds the
+`npm test` runs the sign-in tests. `npm run kit:pin` pins the KT Accounts kit. `node scripts/make-owner-picture.mjs` rebuilds the
 512x512 picture reported to KT Accounts from `public/favicon.png`.

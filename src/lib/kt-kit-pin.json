@@ -2,8 +2,8 @@
   "origin": "https://accounts.aidenkt.com",
   "from": "https://accounts.aidenkt.com/kit/manifest.json",
   "js": {
-    "file": "kit.6ba80d3b4e.js",
-    "integrity": "sha384-uoofRM6F+THaxwNZY8IYtnuwbpUgl1/09gT1ua0eBcEHKk0WuqhQdzuaaOjM5niV"
+    "file": "kit.f2f624070f.js",
+    "integrity": "sha384-cPJ1bpZWYw97lKzcMtLmX6EBZVGUyktSZtJ6JaOu/oOG1X4wA0XbjylkzW3B749X"
   },
   "css": {
     "file": "kit.ea6c4a152c.css",

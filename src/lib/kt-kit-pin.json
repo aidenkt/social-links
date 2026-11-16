@@ -2,11 +2,11 @@
   "origin": "https://accounts.aidenkt.com",
   "from": "https://accounts.aidenkt.com/kit/manifest.json",
   "js": {
-    "file": "kit.da86a02dab.js",
-    "integrity": "sha384-Sn5x6DQbDktwW3SnX5GB7ZaTlGNu5r++Hijyy361cl74hCsasUiaHcfUlxkf6Xb/"
+    "file": "kit.50e35a1bc1.js",
+    "integrity": "sha384-Eazb4ludfNmTI+v123RBqFF6udAa4eZzNKWr1b1+nij3ro56mdSG9xkM/Yyd85De"
   },
   "css": {
-    "file": "kit.73eb5a3cca.css",
-    "integrity": "sha384-S6m/0AcoyitsnVUsxueV3LSmgCILkbKNF05ATQE2Rco8qCHLKFT7VTzNdcvkesUa"
+    "file": "kit.5fbdb8adbc.css",
+    "integrity": "sha384-CBplcQ/AJowS58pz8/CqlHEggtMhBr2AdZ3+jU+sOvZ68VN8AiwWPa6Lk1L7bnOu"
   }
 }
